@@ -6,13 +6,11 @@
     "image-dataset",
     "image-collection",
     "image-classification",
-    "google-search",
-    "transfer-learning",
+    "cli",
     "typescript",
-    "nodejs",
-    "isomorphic",
     "machine-learning",
-    "data-processing"
+    "transfer-learning",
+    "google-search"
   ],
   "author": {
     "name": "Beeno Tung",

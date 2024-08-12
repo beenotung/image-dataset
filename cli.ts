@@ -11,6 +11,26 @@ function parseArguments() {
     let arg = args[i]
     let next = args[i + 1]
     switch (arg) {
+      case '-h':
+      case '--help': {
+        console.log(
+          `
+Usage: npx image-dataset [options]
+
+Options:
+  -h, --help                  Show this help message and exit.
+  -l, --listFile <path>       Specify a file containing a list of search terms. Each term should be on a new line.
+  -s, --searchTerm "<term>"   Add a single search term for processing. Use quotes if the term contains spaces.
+  -d, --downloadDir <dir>     Set the directory where downloads will be saved.
+
+Notes:
+  - At least one search term must be specified, either using --listFile or --searchTerm.
+  - If an argument is missing or incorrect, the program will terminate with an error message.
+`.trim(),
+        )
+        process.exit(0)
+      }
+      case '-l':
       case '--listFile': {
         if (!next) {
           console.error('Error: missing file path after --listFile')
@@ -20,11 +40,13 @@ function parseArguments() {
         i++
         break
       }
-      case '--keyword': {
+      case '-s':
+      case '--searchTerm': {
         keywords.push(next)
         i++
         break
       }
+      case '-d':
       case '--downloadDir': {
         if (!next) {
           console.error('Error: missing directory path after --downloadDir')
@@ -42,7 +64,7 @@ function parseArguments() {
   }
   if (keywords.length == 0) {
     console.error('Error: missing keywords')
-    console.error('Either specify with --listFile or --keyword')
+    console.error('Either specify with --searchTerm or --listFile')
     process.exit(1)
   }
   return { keywords }

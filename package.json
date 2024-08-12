@@ -1,0 +1,42 @@
+{
+  "name": "image-dataset",
+  "version": "0.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "tsc --noEmit",
+    "clean": "rimraf dist",
+    "build": "rimraf dist && tsc -p . && rimraf dist/tsconfig.tsbuildinfo",
+    "tsc": "tsc -p .",
+    "db:ui": "erd-ui erd.txt",
+    "db:setup": "npm run db:migrate",
+    "db:dev": "run-s db:migrate db:plan db:update",
+    "db:migrate": "knex migrate:latest",
+    "db:plan": "auto-migrate db.sqlite3 < erd.txt",
+    "db:update": "run-s db:migrate db:gen-proxy",
+    "db:gen-proxy": "erd-to-proxy < erd.txt > proxy.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.10",
+    "@types/integer": "^4.0.1",
+    "@types/node": "^22.2.0",
+    "npm-run-all": "^4.1.5",
+    "quick-erd": "^4.23.2",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "@beenotung/tslib": "^23.9.0",
+    "better-sqlite3": "^11.0.0",
+    "better-sqlite3-proxy": "^2.8.0",
+    "better-sqlite3-schema": "^3.1.7",
+    "graceful-playwright": "^1.2.0",
+    "knex": "^3.1.0",
+    "playwright": "^1.45.2"
+  }
+}

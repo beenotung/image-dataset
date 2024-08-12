@@ -12,8 +12,8 @@ Tool to build image dataset: collect, classify, review
 
 ## Features
 
+- CLI support for ease of use
 - Typescript support
-- Isomorphic package: works in Node.js and browsers
 - Works with plain Javascript, Typescript is not mandatory
 
 ## Installation
@@ -26,15 +26,20 @@ You can also install `image-dataset` with [pnpm](https://pnpm.io/), [yarn](https
 
 ## Usage Example
 
-```typescript
-import {} from 'image-dataset'
-```
+Usage: `nxp image-dataset [options]`
 
-## Typescript Signature
+**Options:**
 
-```typescript
+- `-h, --help` : Show this help message and exit.
+- `-v, --version` : Show the version number and exit.
+- `-l, --listFile <path>` : Specify a file containing a list of search terms. Each term should be on a new line.
+- `-s, --searchTerm "<term>"` : Add a single search term for processing. Use quotes if the term contains spaces.
+- `-d, --downloadDir <dir>` : Set the directory where downloads will be saved.
 
-```
+**Notes:**
+
+- At least one search term must be specified, either using `--listFile` or `--searchTerm`.
+- If an argument is missing or incorrect, the program will terminate with an error message.
 
 ## License
 

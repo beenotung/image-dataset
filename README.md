@@ -6,9 +6,9 @@ Tool to build image dataset: collect, classify, review
 
 ## Key Steps
 
-- Collect images from Google Search
-- Classify images with transfer learning
-- Review the classify result to ensure data quality
+- [x] Collect images from Google Search
+- [ ] Classify images with transfer learning
+- [ ] Review the classify result to ensure data quality
 
 ## Features
 

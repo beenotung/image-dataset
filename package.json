@@ -26,11 +26,12 @@
   "bugs": {
     "url": "https://github.com/beenotung/image-dataset/issues"
   },
-  "main": "index.js",
+  "main": "dist/main.js",
   "bin": {
-    "image-dataset": "dist/cli.js"
+    "image-dataset": "dist/main.js"
   },
   "scripts": {
+    "start": "ts-node main.ts --listFile list.txt",
     "test": "tsc --noEmit",
     "clean": "rimraf dist",
     "build": "rimraf dist && tsc -p . && rimraf dist/tsconfig.tsbuildinfo",

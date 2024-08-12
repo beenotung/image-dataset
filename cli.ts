@@ -3,7 +3,7 @@ import { extract_lines } from '@beenotung/tslib/string'
 import { closeBrowser, collectByKeyword, config } from './collect'
 import { proxy } from './proxy'
 import { find } from 'better-sqlite3-proxy'
-import { join } from 'path'
+import { resolveFile } from './file'
 
 function parseArguments() {
   let keywords: string[] = []
@@ -89,19 +89,8 @@ Notes:
 }
 
 function showVersion(log: typeof console.log) {
-  let pkg = loadPackage()
+  let pkg = require(resolveFile('package.json'))
   log(`${pkg.name} v${pkg.version}`)
-}
-
-function loadPackage() {
-  let dir = __dirname
-  for (;;) {
-    let file = join(dir, 'package.json')
-    if (existsSync(file)) {
-      return require(file)
-    }
-    dir = join(dir, '..')
-  }
 }
 
 function readListFile(file: string) {
@@ -114,7 +103,7 @@ function readListFile(file: string) {
   return lines
 }
 
-async function main() {
+export async function cli() {
   let args = parseArguments()
 
   for (let keyword of args.keywords) {
@@ -128,5 +117,3 @@ async function main() {
 
   await closeBrowser()
 }
-
-main().catch(e => console.error(e))

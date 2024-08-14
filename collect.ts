@@ -1,5 +1,4 @@
 import { chromium } from 'playwright'
-import { later } from '@beenotung/tslib/async/wait'
 import { ProgressCli } from '@beenotung/tslib/progress-cli'
 import { createHash } from 'crypto'
 import { join } from 'path'
@@ -72,18 +71,26 @@ export async function collectByKeyword(keyword: string) {
   }
 
   async function scrollToBottom() {
-    let found = await page.evaluate(() => {
-      let imgs = document.querySelectorAll<HTMLElement>(
-        '[data-lpage] g-img img',
-      )
-      let img = imgs[imgs.length - 1]
-      if (!img) return false
-      img.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      return true
+    await page.evaluate(async () => {
+      for (;;) {
+        let imgs = document.querySelectorAll<HTMLElement>(
+          '[data-lpage] g-img img',
+        )
+        let img = imgs[imgs.length - 1]
+        if (!img) return
+        img.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        let bars = document.querySelectorAll('[role="progressbar"]')
+        let bar = bars[bars.length - 1]
+        if (!bar) return
+        let rect = bar.getBoundingClientRect()
+        let size = rect.width * rect.height
+        if (size == 0) return
+
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
     })
-    if (found) {
-      await later(1000)
-    }
   }
 
   async function saveImage(image: ImageItem) {

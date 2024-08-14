@@ -5,10 +5,7 @@ import { join } from 'path'
 import { mkdir, stat, writeFile } from 'fs/promises'
 import { find, seedRow } from 'better-sqlite3-proxy'
 import { proxy } from './proxy'
-
-export let config = {
-  rootDir: 'downloaded',
-}
+import { config } from './config'
 
 let cli = new ProgressCli()
 

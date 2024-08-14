@@ -1,12 +1,17 @@
 import { existsSync, readFileSync } from 'fs'
 import { extract_lines } from '@beenotung/tslib/string'
-import { closeBrowser, collectByKeyword, config } from './collect'
+import { closeBrowser, collectByKeyword } from './collect'
 import { proxy } from './proxy'
 import { find } from 'better-sqlite3-proxy'
 import { resolveFile } from './file'
+import { analysis } from './analysis'
+import { config } from './config'
+
+type Mode = 'download' | 'analysis'
 
 function parseArguments() {
   let keywords: string[] = []
+  let mode: Mode = 'download'
   let args = process.argv
   if (args.length == 2) {
     showVersion(console.error)
@@ -72,6 +77,11 @@ Notes:
         i++
         break
       }
+      case '-a':
+      case '--analysis': {
+        mode = 'analysis'
+        break
+      }
       default: {
         showVersion(console.error)
         console.error('Error: unknown argument: ' + JSON.stringify(arg))
@@ -79,13 +89,13 @@ Notes:
       }
     }
   }
-  if (keywords.length == 0) {
+  if (mode == 'download' && keywords.length == 0) {
     showVersion(console.error)
     console.error('Error: missing keywords')
     console.error('Either specify with --searchTerm or --listFile')
     process.exit(1)
   }
-  return { keywords }
+  return { keywords, mode }
 }
 
 function showVersion(log: typeof console.log) {
@@ -105,6 +115,11 @@ function readListFile(file: string) {
 
 export async function cli() {
   let args = parseArguments()
+
+  if (args.mode == 'analysis') {
+    analysis()
+    return
+  }
 
   for (let keyword of args.keywords) {
     if (find(proxy.keyword, { keyword })?.complete_time) {

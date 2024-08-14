@@ -26,7 +26,7 @@ You can also install `image-dataset` with [pnpm](https://pnpm.io/), [yarn](https
 
 ## Usage Example
 
-Usage: `nxp image-dataset [options]`
+Usage: `npx image-dataset [options]`
 
 **Options:**
 

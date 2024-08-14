@@ -30,6 +30,9 @@
   "bin": {
     "image-dataset": "dist/main.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "start": "ts-node main.ts --listFile list.txt",
     "test": "tsc --noEmit",

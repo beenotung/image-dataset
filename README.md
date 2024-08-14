@@ -34,12 +34,12 @@ Usage: `nxp image-dataset [options]`
 - `-v, --version` : Show the version number and exit.
 - `-l, --listFile <path>` : Specify a file containing a list of search terms. Each term should be on a new line.
 - `-s, --searchTerm "<term>"` : Add a single search term for processing. Use quotes if the term contains spaces.
-- `-d, --downloadDir <dir>` : Set the directory where downloads will be saved.
+- `-d, --downloadDir <dir>` : Set the directory where downloads will be saved. Default is "./downloaded".
 
 **Notes:**
 
-- At least one search term must be specified, either using `--listFile` or `--searchTerm`.
-- If an argument is missing or incorrect, the program will terminate with an error message.
+- Default mode is download mode.
+- In download mode, at least one search term must be specified, either using `--listFile` or `--searchTerm`.
 
 ## License
 

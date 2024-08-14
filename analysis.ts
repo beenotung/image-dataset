@@ -1,4 +1,4 @@
-import { readdirSync } from 'fs'
+import { existsSync, readdirSync } from 'fs'
 import { config } from './config'
 import { db } from './db'
 import { csv_to_table_text, json_to_csv } from '@beenotung/tslib/csv'
@@ -52,12 +52,24 @@ function scanImageDir(dir: string) {
 }
 
 export function analysis() {
-  let rows = select_counts.all()
+  let rows: { keyword: string }[] = select_counts.all()
+  if (rows.length == 0 && existsSync(config.rootDir)) {
+    let keywords = readdirSync(config.rootDir)
+    rows = keywords.map(keyword => ({ keyword }))
+  }
+  if (rows.length == 0) {
+    console.error('Error: no images downloaded yet')
+    process.exit(1)
+  }
   for (let row of rows) {
     let dir = join(config.rootDir, row.keyword)
     let extra = scanImageDir(dir)
     Object.assign(row, extra)
   }
+  showTable(rows)
+}
+
+function showTable(rows: object[]) {
   let csv = json_to_csv(rows)
   let text = csv_to_table_text(csv)
   console.log(text)

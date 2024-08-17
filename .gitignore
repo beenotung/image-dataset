@@ -19,3 +19,6 @@ dump.sql
 *.xz
 downloaded/
 list.txt
+saved_models/
+unclassified/
+dataset/

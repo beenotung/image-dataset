@@ -22,3 +22,4 @@ list.txt
 saved_models/
 unclassified/
 dataset/
+*.zip

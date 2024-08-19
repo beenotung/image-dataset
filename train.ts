@@ -3,7 +3,7 @@ import { loadModels } from './model'
 export async function main() {
   let { classifierModel } = await loadModels()
   await classifierModel.trainAsync({
-    epochs: 10,
+    epochs: 20,
   })
   await classifierModel.save()
 }

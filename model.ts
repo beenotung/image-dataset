@@ -1,4 +1,4 @@
-import { mkdirSync } from 'fs'
+import { mkdirSync, readdirSync } from 'fs'
 import { join } from 'path'
 import {
   PreTrainedImageModels,
@@ -6,10 +6,22 @@ import {
   loadImageModel,
 } from 'tensorflow-helpers'
 
-export let classNames: string[] = ['others', 'girl', 'boy', 'both']
+mkdirSync('dataset', { recursive: true })
 
-for (let className of classNames) {
-  mkdirSync(join('dataset', className), { recursive: true })
+export let classNames: string[] = readdirSync('dataset')
+
+if (classNames.length == 0) {
+  console.error('Error: no class names found in dataset directory')
+  console.error('Example: others, cat, dog, both')
+  process.exit(1)
+}
+
+export function setClassNames(names: string[]) {
+  classNames.length = 0
+  for (let className of names) {
+    mkdirSync(join('dataset', className), { recursive: true })
+    classNames.push(className)
+  }
 }
 
 export async function loadModels() {

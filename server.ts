@@ -111,7 +111,8 @@ app.get('/unclassified', async (req, res) => {
       confidence: number
       results: ClassificationResult[]
     }[] = []
-    let deadline = Date.now() + 5 * SECOND
+    let deadlineTimeout = 5 * SECOND
+    let deadline = Date.now() + deadlineTimeout
     for (let filename of filenames) {
       if (Date.now() > deadline) {
         break

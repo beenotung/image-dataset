@@ -4,7 +4,7 @@ import { join } from 'path'
 let unclassifiedDir = 'unclassified'
 let classifiedDir = 'classified'
 
-function main() {
+export function main() {
   mkdirSync(unclassifiedDir, { recursive: true })
   mkdirSync(classifiedDir, { recursive: true })
   let classNames = readdirSync(classifiedDir)

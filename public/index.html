@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Dataset</title>
+    <style>
+      section {
+        margin-bottom: 1rem;
+      }
+      #actionList {
+        display: flex;
+        gap: 0.5rem;
+      }
+      #actionList button {
+        padding: 0.25rem 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <section>
+      <div class="section-header">Actions:</div>
+      <div id="actionList">
+        <button>loading...</button>
+      </div>
+      <div id="actionResult"></div>
+    </section>
+    <section>
+      <div class="section-header">Stats:</div>
+      <div id="statsList">
+        <div>loading...</div>
+      </div>
+    </section>
+    <script src="/data-template/base.js"></script>
+    <script>
+      getJSON('/actions', json => {
+        actionList.textContent = ''
+        for (let action of json.actions) {
+          let button = document.createElement('button')
+          let name = action[0].toUpperCase() + action.slice(1)
+          button.textContent = name
+          button.onclick = async () => {
+            button.textContent = name + ' (running...)'
+            let res = await fetch('/' + action, { method: 'POST' })
+            let json = await res.json()
+            if (json.error) {
+              button.textContent = name + ' (error)'
+              actionResult.textContent = json.error
+            } else {
+              button.textContent = name + ' (done)'
+              actionResult.textContent = ''
+              loadStats()
+            }
+          }
+          actionList.appendChild(button)
+        }
+      })
+
+      function loadStats() {
+        getJSON('/stats', json => {
+          statsList.textContent = ''
+          for (let [name, count] of Object.entries(json.stats)) {
+            let stats = document.createElement('div')
+            stats.textContent = `${name}: ${count}`
+            statsList.appendChild(stats)
+          }
+        })
+      }
+      loadStats()
+    </script>
+  </body>
+</html>

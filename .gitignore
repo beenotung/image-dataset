@@ -20,6 +20,7 @@ dump.sql
 downloaded/
 list.txt
 saved_models/
+classified/
 unclassified/
 dataset/
 *.zip

@@ -20,13 +20,7 @@ export function makeCache<T>(
 
 export let modelsCache = makeCache(() => loadModels())
 
-export let datasetCache = makeCache(
-  async () => {
-    let models = await modelsCache.get()
-    return models.classifierModel.loadDatasetFromDirectoryAsync()
-  },
-  dataset => {
-    dataset.x.dispose()
-    dataset.y.dispose()
-  },
-)
+export let datasetCache = makeCache(async () => {
+  let models = await modelsCache.get()
+  return models.classifierModel.loadDatasetFromDirectoryAsync({ cache: true })
+})

@@ -2,11 +2,12 @@ import { datasetCache, modelsCache } from './cache'
 
 export async function main() {
   let { classifierModel } = await modelsCache.get()
-  let { x, y } = await datasetCache.get()
+  let { x, y, classCounts } = await datasetCache.get()
   await classifierModel.trainAsync({
     x,
     y,
-    epochs: 20,
+    classCounts,
+    epochs: 10,
   })
   await classifierModel.save()
 }

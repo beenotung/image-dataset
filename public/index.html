@@ -5,8 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Image Dataset</title>
     <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+      }
       section {
         margin-bottom: 1rem;
+      }
+      .section-header {
+        font-size: 1.25rem;
+        margin: 0.25rem 0;
       }
       #actionList {
         display: flex;
@@ -15,45 +22,117 @@
       #actionList button {
         padding: 0.25rem 0.5rem;
       }
+      [data-text='className'] {
+        font-weight: bold;
+        margin: 0.25rem 0;
+      }
+      #classifiedList .img-list {
+        display: flex;
+        flex-wrap: wrap;
+        line-height: 0;
+      }
+      #classifiedList img {
+        width: 200px;
+        height: 200px;
+        object-fit: contain;
+        padding: 20px;
+        --border: 5px;
+        --top: transparent;
+        --bottom: transparent;
+        background-size: var(--border) 100%;
+        background-position: 0 0, 100% 0;
+        background-repeat: no-repeat;
+        border-top: var(--border) solid var(--top);
+        border-bottom: var(--border) solid var(--bottom);
+        background-image: linear-gradient(var(--top), var(--bottom)),
+          linear-gradient(var(--top), var(--bottom));
+      }
+      #classifiedList img.selected {
+        --top: #47c465;
+        --bottom: #00deff;
+      }
+      #correctClassDialog {
+        position: sticky;
+        bottom: 1rem;
+        margin: auto;
+        padding: 1rem;
+        border-radius: 1rem;
+        border: 1px solid black;
+        background-color: #fffa;
+        backdrop-filter: blue(3px);
+        width: fit-content;
+      }
     </style>
   </head>
   <body>
+    <template data-name="button">
+      <button data-text="text" data-onclick="onclick"></button>
+    </template>
     <section>
-      <div class="section-header">Actions:</div>
-      <div id="actionList">
-        <button>loading...</button>
+      <div class="section-header">Actions</div>
+      <div id="actionList" data-template="button" data-bind="actions">
+        loading...
       </div>
       <div id="actionResult"></div>
     </section>
     <section>
-      <div class="section-header">Stats:</div>
+      <div class="section-header">Stats</div>
+      <button onclick="loadStats()">reload</button>
       <div id="statsList">
         <div>loading...</div>
+      </div>
+    </section>
+    <section>
+      <div class="section-header">Classified</div>
+      <button onclick="loadClassified()">reload</button>
+      <div id="classifiedList" data-template="classified" data-bind="classes">
+        loading...
+      </div>
+      <template data-name="classified">
+        <div class="classified">
+          <div data-text="className"></div>
+          <div><span data-text="count"></span> images</div>
+          <div class="img-list">
+            <div data-value="images">
+              <img data-src="src" loading="lazy" data-onclick="toggle" />
+            </div>
+          </div>
+        </div>
+      </template>
+      <div id="correctClassDialog">
+        <div class="section-header">
+          Correct Label (<span id="correctCount">0</span>)
+        </div>
+        <div id="correctList" data-template="button" data-bind="buttons"></div>
+        <div id="correctResult"></div>
       </div>
     </section>
     <script src="/data-template/base.js"></script>
     <script>
       getJSON('/actions', json => {
         actionList.textContent = ''
-        for (let action of json.actions) {
-          let button = document.createElement('button')
-          let name = action[0].toUpperCase() + action.slice(1)
-          button.textContent = name
-          button.onclick = async () => {
-            button.textContent = name + ' (running...)'
-            let res = await fetch('/' + action, { method: 'POST' })
-            let json = await res.json()
-            if (json.error) {
-              button.textContent = name + ' (error)'
-              actionResult.textContent = json.error
-            } else {
-              button.textContent = name + ' (done)'
-              actionResult.textContent = ''
-              loadStats()
+        renderTemplate(actionList, {
+          actions: json.actions.map(action => {
+            let name = action[0].toUpperCase() + action.slice(1)
+            return {
+              text: name,
+              async onclick(event) {
+                let button = event.currentTarget
+                button.textContent = name + ' (running...)'
+                let res = await fetch('/' + action, { method: 'POST' })
+                let json = await res.json()
+                if (json.error) {
+                  button.textContent = name + ' (error)'
+                  actionResult.textContent = json.error
+                  return
+                }
+                button.textContent = name + ' (done)'
+                actionResult.textContent = ''
+                loadStats()
+              },
             }
-          }
-          actionList.appendChild(button)
-        }
+          }),
+        })
       })
 
       function loadStats() {
@@ -67,6 +146,78 @@
         })
       }
       loadStats()
+
+      function loadClassified() {
+        getJSON('/classified', json => {
+          renderTemplate(classifiedList, {
+            classes: json.classes.map(({ className, filenames }) => {
+              return {
+                className,
+                count: filenames.length,
+                images: filenames.map(filename => ({
+                  src: `/classified/${className}/${filename}`,
+                  toggle(event) {
+                    let img = event.currentTarget
+                    if (!img.classList.contains('selected')) {
+                      img.classList.add('selected')
+                      correctCount.textContent++
+                    } else {
+                      img.classList.remove('selected')
+                      correctCount.textContent--
+                    }
+                  },
+                })),
+              }
+            }),
+          })
+          renderTemplate(correctList, {
+            buttons: json.classes.map(({ className }) => {
+              return {
+                text: className,
+                async onclick(event) {
+                  let button = event.currentTarget
+                  button.textContent = className + ' (correcting...)'
+                  let selectedImgs =
+                    classifiedList.querySelectorAll('.selected')
+                  let images = Array.from(selectedImgs, img => {
+                    let parts = img.src.split('/')
+                    let filename = parts.pop()
+                    let className = parts.pop()
+                    return { className, filename }
+                  })
+                  let res = await fetch('/classified/correct', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      className,
+                      images,
+                    }),
+                  })
+                  let json = await res.json()
+                  if (json.error) {
+                    button.textContent = className + ' (error)'
+                    correctResult.textContent = json.error
+                    return
+                  }
+                  button.textContent = className + ' (done)'
+                  correctResult.textContent = ''
+                  correctCount.textContent = 0
+                  for (let img of selectedImgs) {
+                    img.remove()
+                  }
+                  classifiedList
+                    .querySelectorAll('.classified')
+                    .forEach(div => {
+                      div.querySelector('[data-text="count"]').textContent =
+                        div.querySelectorAll('img').length
+                    })
+                },
+              }
+            }),
+          })
+        })
+      }
+      loadClassified()
     </script>
   </body>
 </html>

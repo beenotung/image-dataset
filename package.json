@@ -50,6 +50,7 @@
   },
   "dependencies": {
     "@beenotung/tslib": "^23.9.0",
+    "@tensorflow/tfjs-node": "^4.20.0",
     "better-sqlite3": "^11.0.0",
     "better-sqlite3-proxy": "^2.8.0",
     "better-sqlite3-schema": "^3.1.7",
@@ -65,7 +66,7 @@
     "listening-on": "^2.0.9",
     "playwright": "^1.45.2",
     "populate-env": "^2.1.0",
-    "tensorflow-helpers": "^0.5.0"
+    "tensorflow-helpers": "^0.6.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.10",

@@ -7,11 +7,21 @@ import { main as unclassify } from './unclassify'
 import { join } from 'path'
 import { readdir, rename } from 'fs/promises'
 import { datasetCache, modelsCache } from './cache'
+import * as tf from '@tensorflow/tfjs-node'
+import {
+  toOneTensor,
+  mapWithClassName,
+  ClassificationResult,
+  topClassifyResult,
+} from 'tensorflow-helpers'
+import { groupBy } from '@beenotung/tslib/functional'
+import { SECOND } from '@beenotung/tslib/time'
 
 let app = express()
 
 app.use('/data-template', express.static('node_modules/data-template'))
 app.use('/classified', express.static('classified'))
+app.use('/unclassified', express.static('unclassified'))
 app.use(express.static('public'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
@@ -87,6 +97,57 @@ async function scanDir2Files(dir: string) {
     }),
   )
 }
+
+let embeddingCache = new Map<string, tf.Tensor>()
+
+app.get('/unclassified', async (req, res) => {
+  try {
+    let { baseModel, classifierModel } = await modelsCache.get()
+    let filenames = await readdir('unclassified')
+    let images: {
+      filename: string
+      label: string
+      confidence: number
+      results: ClassificationResult[]
+    }[] = []
+    let deadline = Date.now() + 5 * SECOND
+    for (let filename of filenames) {
+      if (Date.now() > deadline) {
+        break
+      }
+      let embedding = embeddingCache.get(filename)
+      if (!embedding) {
+        let file = join('unclassified', filename)
+        embedding = await baseModel.inferEmbeddingAsync(file)
+        embeddingCache.set(filename, embedding)
+      }
+      let tensors = tf.tidy(() =>
+        toOneTensor(classifierModel.classifierModel.predict(embedding!)),
+      )
+      let values = await tensors.data()
+      tensors.dispose()
+      let results = mapWithClassName(classifierModel.classNames, values)
+      let result = topClassifyResult(results)
+      images.push({
+        filename,
+        label: result.label,
+        confidence: result.confidence,
+        results,
+      })
+    }
+    res.json({
+      classes: Array.from(
+        groupBy(image => image.label, images).entries(),
+        ([className, images]) => ({
+          className,
+          images,
+        }),
+      ),
+    })
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
 
 app.get('/classified', async (req, res) => {
   res.json({ classes: await scanDir2Files('classified') })

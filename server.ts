@@ -6,6 +6,7 @@ import { main as classify } from './classify'
 import { main as unclassify } from './unclassify'
 import { join } from 'path'
 import { readdir, rename } from 'fs/promises'
+import { datasetCache, modelsCache } from './cache'
 
 let app = express()
 
@@ -19,7 +20,14 @@ app.use(express.urlencoded({ extended: false }))
 /* actions */
 /***********/
 
-let actions = { train, retrain, classify, unclassify }
+let actions = {
+  loadModel: modelsCache.load,
+  loadDataset: datasetCache.load,
+  train,
+  retrain,
+  classify,
+  unclassify,
+}
 
 app.get('/actions', (req, res) => {
   res.json({ actions: Object.keys(actions) })

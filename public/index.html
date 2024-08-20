@@ -91,12 +91,14 @@
       <template data-name="classified">
         <div class="classified">
           <div data-text="className"></div>
-          <div><span data-text="count"></span> images</div>
-          <div class="img-list">
-            <div data-value="images">
-              <img data-src="src" loading="lazy" data-onclick="toggle" />
+          <details>
+            <summary><span data-text="count"></span> images</summary>
+            <div class="img-list">
+              <div data-value="images">
+                <img data-src="src" loading="lazy" data-onclick="toggle" />
+              </div>
             </div>
-          </div>
+          </details>
         </div>
       </template>
       <div id="correctClassDialog">

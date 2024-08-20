@@ -1,9 +1,9 @@
 import { mkdirSync } from 'fs'
-import { loadModels } from './model'
 import { readdir, rename } from 'fs/promises'
 import { join } from 'path'
 import { topClassifyResult } from 'tensorflow-helpers'
 import { startTimer } from '@beenotung/tslib/timer'
+import { modelsCache } from './cache'
 
 let unclassifiedDir = 'unclassified'
 let classifiedDir = 'classified'
@@ -12,7 +12,7 @@ mkdirSync(unclassifiedDir, { recursive: true })
 
 export async function main() {
   let timer = startTimer('load models')
-  let { classifierModel } = await loadModels()
+  let { classifierModel } = await modelsCache.get()
 
   timer.next('init directories')
   for (let className of classifierModel.classNames) {

@@ -1,17 +1,16 @@
 import { existsSync, readFileSync } from 'fs'
 import { extract_lines } from '@beenotung/tslib/string'
-import { closeBrowser, collectByKeyword } from './collect'
 import { proxy } from './proxy'
 import { find } from 'better-sqlite3-proxy'
 import { resolveFile } from './file'
-import { analysis } from './analysis'
 import { config } from './config'
+import { env } from './env'
 
-type Mode = 'download' | 'analysis'
+type Mode = null | 'download' | 'analysis' | 'webUI'
 
 function parseArguments() {
   let keywords: string[] = []
-  let mode: Mode = 'download'
+  let mode: Mode = null
   let args = process.argv
   if (args.length == 2) {
     showVersion(console.error)
@@ -31,16 +30,26 @@ function parseArguments() {
 Usage: npx image-dataset [options]
 
 Options:
+
+General:
   -h, --help                  Show this help message and exit.
   -v, --version               Show the version number and exit.
+
+Download Mode:
   -l, --listFile <path>       Specify a file containing a list of search terms. Each term should be on a new line.
   -s, --searchTerm "<term>"   Add a single search term for processing. Use quotes if the term contains spaces.
   -d, --downloadDir <dir>     Set the directory where downloads will be saved. Default is "./downloaded".
+
+Analysis Mode:
   -a, --analysis              Run analysis mode instead of download mode.
 
+Web UI Mode:
+  -w, --webUI                 Launch the web-based user interface.
+  -p, --port <number>         Set the port for the web UI. Default is 8100.
+
 Notes:
-  - Default mode is download mode.
   - In download mode, at least one search term must be specified, either using --listFile or --searchTerm.
+  - If no mode-specific options are provided, this help message will be displayed.
 `.trim(),
         )
         process.exit(0)
@@ -57,6 +66,7 @@ Notes:
           console.error('Error: missing file path after --listFile')
           process.exit(1)
         }
+        mode = 'download'
         keywords.push(...readListFile(next))
         i++
         break
@@ -74,6 +84,7 @@ Notes:
           console.error('Error: missing directory path after --downloadDir')
           process.exit(1)
         }
+        mode = 'download'
         config.rootDir = next
         i++
         break
@@ -81,6 +92,26 @@ Notes:
       case '-a':
       case '--analysis': {
         mode = 'analysis'
+        break
+      }
+      case '-w':
+      case '--webUI': {
+        mode = 'webUI'
+        break
+      }
+      case '-p':
+      case '--port': {
+        if (!next) {
+          showVersion(console.error)
+          console.error('Error: missing port number after --port')
+          process.exit(1)
+        }
+        env.PORT = +next
+        if (!env.PORT) {
+          showVersion(console.error)
+          console.error('Error: invalid port number after --port')
+          process.exit(1)
+        }
         break
       }
       default: {
@@ -118,18 +149,26 @@ export async function cli() {
   let args = parseArguments()
 
   if (args.mode == 'analysis') {
-    analysis()
+    let mod = await import('./analysis')
+    mod.analysis()
     return
   }
 
+  if (args.mode == 'webUI') {
+    let mod = await import('./server')
+    mod.startServer(env.PORT)
+    return
+  }
+
+  let mod = await import('./collect')
   for (let keyword of args.keywords) {
     if (find(proxy.keyword, { keyword })?.complete_time) {
       console.log(`skip "${keyword}"`)
       continue
     }
-    await collectByKeyword(keyword)
+    await mod.collectByKeyword(keyword)
     find(proxy.keyword, { keyword })!.complete_time = Date.now()
   }
 
-  await closeBrowser()
+  await mod.closeBrowser()
 }

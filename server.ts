@@ -16,6 +16,7 @@ import {
 } from 'tensorflow-helpers'
 import { groupBy } from '@beenotung/tslib/functional'
 import { SECOND } from '@beenotung/tslib/time'
+import { env } from './env'
 
 let app = express()
 
@@ -176,7 +177,12 @@ app.post('/correct', async (req, res) => {
   }
 })
 
-let port = 8100
-app.listen(port, () => {
-  print(port)
-})
+export function startServer(port: number) {
+  app.listen(port, () => {
+    print(port)
+  })
+}
+
+if (process.argv[1] == __filename) {
+  startServer(env.PORT)
+}

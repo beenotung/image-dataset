@@ -18,8 +18,13 @@ import { groupBy } from '@beenotung/tslib/functional'
 import { SECOND } from '@beenotung/tslib/time'
 import { env } from './env'
 import { resolveFile } from './file'
+import { mkdirSync } from 'fs'
 
 let app = express()
+
+mkdirSync('dataset', { recursive: true })
+mkdirSync('classified', { recursive: true })
+mkdirSync('unclassified', { recursive: true })
 
 app.use(
   '/data-template',

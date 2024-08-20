@@ -21,7 +21,10 @@ import { resolveFile } from './file'
 
 let app = express()
 
-app.use('/data-template', express.static('node_modules/data-template'))
+app.use(
+  '/data-template',
+  express.static(resolveFile('node_modules/data-template')),
+)
 app.use('/classified', express.static('classified'))
 app.use('/unclassified', express.static('unclassified'))
 app.use(express.static(resolveFile('public')))

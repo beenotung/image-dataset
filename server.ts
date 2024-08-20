@@ -17,13 +17,14 @@ import {
 import { groupBy } from '@beenotung/tslib/functional'
 import { SECOND } from '@beenotung/tslib/time'
 import { env } from './env'
+import { resolveFile } from './file'
 
 let app = express()
 
 app.use('/data-template', express.static('node_modules/data-template'))
 app.use('/classified', express.static('classified'))
 app.use('/unclassified', express.static('unclassified'))
-app.use(express.static('public'))
+app.use(express.static(resolveFile('public')))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 

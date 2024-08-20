@@ -31,6 +31,7 @@
     "image-dataset": "bin.js"
   },
   "files": [
+    "public",
     "dist"
   ],
   "scripts": {

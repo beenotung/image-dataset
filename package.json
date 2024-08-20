@@ -28,7 +28,7 @@
   },
   "main": "dist/main.js",
   "bin": {
-    "image-dataset": "dist/main.js"
+    "image-dataset": "bin.js"
   },
   "files": [
     "dist"

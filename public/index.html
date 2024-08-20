@@ -22,7 +22,17 @@
       #actionList button {
         padding: 0.25rem 0.5rem;
       }
-      [data-text='className'] {
+      #statsList {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+      }
+      #statsList table {
+        margin-inline-start: 1rem;
+      }
+      #classifiedList [data-text='className'],
+      #unclassifiedList [data-text='className'] {
         font-weight: bold;
         margin: 0.25rem 0;
       }
@@ -37,7 +47,7 @@
         width: 200px;
         height: 200px;
         object-fit: contain;
-        padding: 20px;
+        padding: 5px;
         --border: 5px;
         --top: transparent;
         --bottom: transparent;
@@ -87,8 +97,40 @@
     <section>
       <div class="section-header">Stats</div>
       <button onclick="loadStats()">reload</button>
-      <div id="statsList">
-        <div>loading...</div>
+      <div id="statsList" hidden>
+        <div>
+          dataset:
+          <table>
+            <thead>
+              <th>count</th>
+              <th>label</th>
+            </thead>
+            <tbody>
+              <tr data-value="dataset">
+                <td data-text="count"></td>
+                <td data-text="className"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          classified:
+          <table>
+            <thead>
+              <th>count</th>
+              <th>label</th>
+            </thead>
+            <tbody>
+              <tr data-value="classified">
+                <td data-text="count"></td>
+                <td data-text="className"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          unclassified: <span data-text="unclassified">loading...</span>
+        </div>
       </div>
     </section>
     <section>
@@ -186,12 +228,69 @@
 
       function loadStats() {
         getJSON('/stats', json => {
-          statsList.textContent = ''
-          for (let [name, count] of Object.entries(json.stats)) {
-            let stats = document.createElement('div')
-            stats.textContent = `${name}: ${count}`
-            statsList.appendChild(stats)
-          }
+          statsList.querySelectorAll('tbody').forEach(tbody => {
+            for (;;) {
+              let row = tbody.rows[1]
+              if (row) {
+                row.remove()
+              } else {
+                break
+              }
+            }
+          })
+          renderData(statsList, json.stats)
+          statsList.hidden = false
+          let classNames = Array.from(
+            new Set([
+              ...json.stats.dataset.map(item => item.className),
+              ...json.stats.classified.map(item => item.className),
+            ]),
+          )
+          renderTemplate(correctList, {
+            buttons: classNames.map(className => {
+              return {
+                text: className,
+                async onclick(event) {
+                  let button = event.currentTarget
+                  button.textContent = className + ' (correcting...)'
+                  let selectedImgs = document.querySelectorAll(
+                    '#classifiedList .selected, #unclassifiedList .selected',
+                  )
+                  let images = Array.from(selectedImgs, img =>
+                    img.getAttribute('src'),
+                  )
+                  let res = await fetch('/correct', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      className,
+                      images,
+                    }),
+                  })
+                  let json = await res.json()
+                  if (json.error) {
+                    button.textContent = className + ' (error)'
+                    correctResult.textContent = json.error
+                    return
+                  }
+                  button.textContent = className + ' (done)'
+                  correctResult.textContent = ''
+                  correctCount.textContent = 0
+                  for (let img of selectedImgs) {
+                    img.parentElement.remove()
+                  }
+                  document
+                    .querySelectorAll(
+                      '#classifiedList .classified, #unclassifiedList .classified',
+                    )
+                    .forEach(div => {
+                      div.querySelector('[data-text="count"]').textContent =
+                        div.querySelectorAll('img').length
+                    })
+                },
+              }
+            }),
+          })
         })
       }
       loadStats()
@@ -241,51 +340,6 @@
                 images: filenames.map(filename => ({
                   src: `/classified/${className}/${filename}`,
                 })),
-              }
-            }),
-          })
-          renderTemplate(correctList, {
-            buttons: json.classes.map(({ className }) => {
-              return {
-                text: className,
-                async onclick(event) {
-                  let button = event.currentTarget
-                  button.textContent = className + ' (correcting...)'
-                  let selectedImgs =
-                    classifiedList.querySelectorAll('.selected')
-                  let images = Array.from(selectedImgs, img => {
-                    let parts = img.src.split('/')
-                    let filename = parts.pop()
-                    let className = parts.pop()
-                    return { className, filename }
-                  })
-                  let res = await fetch('/classified/correct', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      className,
-                      images,
-                    }),
-                  })
-                  let json = await res.json()
-                  if (json.error) {
-                    button.textContent = className + ' (error)'
-                    correctResult.textContent = json.error
-                    return
-                  }
-                  button.textContent = className + ' (done)'
-                  correctResult.textContent = ''
-                  correctCount.textContent = 0
-                  for (let img of selectedImgs) {
-                    img.remove()
-                  }
-                  classifiedList
-                    .querySelectorAll('.classified')
-                    .forEach(div => {
-                      div.querySelector('[data-text="count"]').textContent =
-                        div.querySelectorAll('img').length
-                    })
-                },
               }
             }),
           })

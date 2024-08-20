@@ -4,7 +4,7 @@ import { main as train } from './train'
 import { main as retrain } from './retrain'
 import { main as classify } from './classify'
 import { main as unclassify } from './unclassify'
-import { join } from 'path'
+import { basename, join } from 'path'
 import { readdir, rename } from 'fs/promises'
 import { datasetCache, modelsCache } from './cache'
 import * as tf from '@tensorflow/tfjs-node'
@@ -64,12 +64,13 @@ async function countDirFiles(dir: string) {
 }
 
 async function countDir2Files(dir: string) {
-  let filenames = await readdir(dir)
-  let total = 0
-  for (let filename of filenames) {
-    total += await countDirFiles(join(dir, filename))
-  }
-  return total
+  let classNames = await readdir(dir)
+  return Promise.all(
+    classNames.map(async className => ({
+      className,
+      count: await countDirFiles(join(dir, className)),
+    })),
+  )
 }
 
 app.get('/stats', async (req, res) => {
@@ -153,12 +154,19 @@ app.get('/classified', async (req, res) => {
   res.json({ classes: await scanDir2Files('classified') })
 })
 
-app.post('/classified/correct', async (req, res) => {
+app.post('/correct', async (req, res) => {
   try {
     let { className, images } = req.body
-    for (let image of images) {
-      let srcFile = join('classified', image.className, image.filename)
-      let destFile = join('dataset', className, image.filename)
+    for (let srcFile of images) {
+      srcFile = join('.', srcFile)
+      if (
+        !!srcFile.startsWith('classified/') &&
+        !!srcFile.startsWith('unclassified/')
+      ) {
+        continue
+      }
+      let filename = basename(srcFile)
+      let destFile = join('dataset', className, filename)
       await rename(srcFile, destFile)
     }
     res.json({})

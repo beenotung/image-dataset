@@ -52,7 +52,7 @@ Web UI Mode:
 
 Notes:
   - In download mode, at least one search term must be specified, either using --listFile or --searchTerm.
-  - If no mode-specific options are provided, this help message will be displayed.
+  - A mode is automatically selected when a mode-specific option is given. If none are selected, the help message will guide you.
 `.trim(),
         )
         process.exit(0)

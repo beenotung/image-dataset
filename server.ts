@@ -15,7 +15,6 @@ import {
   topClassifyResult,
 } from 'tensorflow-helpers'
 import { groupBy } from '@beenotung/tslib/functional'
-import { SECOND } from '@beenotung/tslib/time'
 import { env } from './env'
 import { resolveFile } from './file'
 import { mkdirSync } from 'fs'

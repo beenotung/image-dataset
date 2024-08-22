@@ -21,12 +21,13 @@ export type Page = {
 
 export type Image = {
   id?: null | number
-  page_id: number
+  page_id: null | number
   page?: Page
   filename: string
-  keyword_id: number
+  keyword_id: null | number
   keyword?: Keyword
-  alt: string
+  alt: null | string
+  embedding: null | string
 }
 
 export type DBProxy = {

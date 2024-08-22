@@ -123,7 +123,7 @@ export async function collectByKeyword(keyword: string) {
     let domain_id = seedRow(proxy.domain, { domain })
     let page_id = seedRow(proxy.page, { url: page_url }, { domain_id })
 
-    proxy.image.push({ filename, page_id, keyword_id, alt })
+    proxy.image.push({ filename, page_id, keyword_id, alt, embedding: null })
   }
 
   let lastCount = 0

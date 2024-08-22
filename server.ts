@@ -8,13 +8,7 @@ import { main as renameByContentHash } from './rename-by-content-hash'
 import { basename, join } from 'path'
 import { readdir, rename } from 'fs/promises'
 import { datasetCache, modelsCache } from './cache'
-import * as tf from '@tensorflow/tfjs-node'
-import {
-  toOneTensor,
-  mapWithClassName,
-  ClassificationResult,
-  topClassifyResult,
-} from 'tensorflow-helpers'
+import { ClassificationResult, topClassifyResult } from 'tensorflow-helpers'
 import { groupBy } from '@beenotung/tslib/functional'
 import { env } from './env'
 import { resolveFile } from './file'
@@ -45,9 +39,15 @@ app.use(express.urlencoded({ extended: false }))
 
 let actions = {
   renameByContentHash,
-  loadModel: modelsCache.load,
+  loadModel() {
+    unclassifiedImageCache.clear()
+    return modelsCache.load()
+  },
   loadDataset: datasetCache.load,
-  train,
+  train() {
+    unclassifiedImageCache.clear()
+    return train()
+  },
   retrain,
   classify,
   unclassify,
@@ -115,33 +115,20 @@ async function scanDir2Files(dir: string) {
 
 let isClassifying = false
 
+type UnclassifiedImage = {
+  filename: string
+  label: string
+  confidence: number
+  results: ClassificationResult[]
+}
+let unclassifiedImageCache = new Map<string, UnclassifiedImage>()
+
 app.get('/unclassified', async (req, res) => {
   let hasSentResponse = false
   try {
-    let { embeddingCache, baseModel, classifierModel } = await modelsCache.get()
-    let images: {
-      filename: string
-      label: string
-      confidence: number
-      results: ClassificationResult[]
-    }[] = []
+    let { baseModel, classifierModel } = await modelsCache.get()
 
-    async function addImage(filename: string) {
-      let file = join('unclassified', filename)
-      let embedding = await baseModel.imageFileToEmbedding(file)
-      let tensors = tf.tidy(() =>
-        toOneTensor(classifierModel.classifierModel.predict(embedding)),
-      )
-      let values = await tensors.data()
-      let results = mapWithClassName(classifierModel.classNames, values)
-      let result = topClassifyResult(results)
-      images.push({
-        filename,
-        label: result.label,
-        confidence: result.confidence,
-        results,
-      })
-    }
+    let images: UnclassifiedImage[] = []
 
     let filenames = await readdir('unclassified')
     let newFilenames: string[] = []
@@ -152,16 +139,13 @@ app.get('/unclassified', async (req, res) => {
     let timer = startTimer('load unclassified (cached)')
     timer.setEstimateProgress(filenames.length)
     for (let filename of filenames) {
-      if (!embeddingCache.has(filename)) {
+      let image = unclassifiedImageCache.get(filename)
+      if (image) {
+        images.push(image)
+      } else {
         newFilenames.push(filename)
-        continue
       }
-      await addImage(filename)
       timer.tick()
-      if (!hasSentResponse && Date.now() >= deadline) {
-        sendResponse()
-      }
-      await later(0)
     }
 
     if (isClassifying) {
@@ -173,13 +157,24 @@ app.get('/unclassified', async (req, res) => {
     timer.next('load unclassified (uncached)')
     timer.setEstimateProgress(newFilenames.length)
     for (let filename of newFilenames) {
-      await addImage(filename)
-      timer.tick()
+      let file = join('unclassified', filename)
+      let results = await classifierModel.classifyImageFile(file)
+      let result = topClassifyResult(results)
+      let image: UnclassifiedImage = {
+        filename,
+        label: result.label,
+        confidence: result.confidence,
+        results,
+      }
+      unclassifiedImageCache.set(filename, image)
+      images.push(image)
       if (!hasSentResponse && Date.now() >= deadline) {
         sendResponse()
       }
+      timer.tick()
       await later(0)
     }
+
     timer.end()
 
     sendResponse()
@@ -225,6 +220,7 @@ app.post('/correct', async (req, res) => {
         continue
       }
       let filename = basename(srcFile)
+      unclassifiedImageCache.delete(filename)
       let destFile = join('dataset', className, filename)
       await rename(srcFile, destFile)
     }

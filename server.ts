@@ -121,12 +121,7 @@ app.get('/unclassified', async (req, res) => {
       confidence: number
       results: ClassificationResult[]
     }[] = []
-    let deadlineTimeout = 5 * SECOND
-    let deadline = Date.now() + deadlineTimeout
     for (let filename of filenames) {
-      if (Date.now() > deadline) {
-        break
-      }
       let embedding = embeddingCache.get(filename)
       if (!embedding) {
         let file = join('unclassified', filename)

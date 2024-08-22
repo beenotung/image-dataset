@@ -6,7 +6,7 @@ import { resolveFile } from './file'
 import { config } from './config'
 import { env } from './env'
 
-type Mode = null | 'download' | 'analysis' | 'webUI'
+type Mode = null | 'download' | 'analysis' | 'rename' | 'webUI'
 
 function parseArguments() {
   let keywords: string[] = []
@@ -42,6 +42,9 @@ Download Mode:
 
 Analysis Mode:
   -a, --analysis              Run analysis mode instead of download mode.
+
+Rename Mode:
+  -r, --rename                Rename image filenames by content hash.
 
 Web UI Mode:
   -w, --webUI                 Launch the web-based user interface.
@@ -92,6 +95,11 @@ Notes:
       case '-a':
       case '--analysis': {
         mode = 'analysis'
+        break
+      }
+      case '-r':
+      case '--rename': {
+        mode = 'rename'
         break
       }
       case '-w':
@@ -151,6 +159,12 @@ export async function cli() {
   if (args.mode == 'analysis') {
     let mod = await import('./analysis')
     mod.analysis()
+    return
+  }
+
+  if (args.mode == 'rename') {
+    let mod = await import('./rename-by-content-hash')
+    mod.main()
     return
   }
 

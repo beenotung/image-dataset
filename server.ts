@@ -112,12 +112,12 @@ async function scanDir2Files(dir: string) {
   )
 }
 
-let embeddingCache = new Map<string, tf.Tensor>()
+let isClassifying = false
 
 app.get('/unclassified', async (req, res) => {
   try {
-    let { baseModel, classifierModel } = await modelsCache.get()
-    let filenames = await readdir('unclassified')
+    let { embeddingCache, baseModel, classifierModel } = await modelsCache.get()
+    let hasSentResponse = false
     let images: {
       filename: string
       label: string
@@ -125,25 +125,13 @@ app.get('/unclassified', async (req, res) => {
       results: ClassificationResult[]
     }[] = []
 
-    let hasSentResponse = false
-
-    let deadlineTimeout = 5 * SECOND
-    let deadline = Date.now() + deadlineTimeout
-
-    let timer = startTimer('load unclassified')
-    timer.setEstimateProgress(filenames.length)
-    for (let filename of filenames) {
-      let embedding = embeddingCache.get(filename)
-      if (!embedding) {
-        let file = join('unclassified', filename)
-        embedding = await baseModel.imageFileToEmbedding(file)
-        embeddingCache.set(filename, embedding)
-      }
+    async function addImage(filename: string) {
+      let file = join('unclassified', filename)
+      let embedding = await baseModel.imageFileToEmbedding(file)
       let tensors = tf.tidy(() =>
-        toOneTensor(classifierModel.classifierModel.predict(embedding!)),
+        toOneTensor(classifierModel.classifierModel.predict(embedding)),
       )
       let values = await tensors.data()
-      tensors.dispose()
       let results = mapWithClassName(classifierModel.classNames, values)
       let result = topClassifyResult(results)
       images.push({
@@ -152,19 +140,52 @@ app.get('/unclassified', async (req, res) => {
         confidence: result.confidence,
         results,
       })
+    }
+
+    let filenames = await readdir('unclassified')
+    let newFilenames: string[] = []
+
+    let deadlineTimeout = 3 * SECOND
+    let deadline = Date.now() + deadlineTimeout
+
+    let timer = startTimer('load unclassified (cached)')
+    timer.setEstimateProgress(filenames.length)
+    for (let filename of filenames) {
+      if (!embeddingCache.has(filename)) {
+        newFilenames.push(filename)
+        continue
+      }
+      await addImage(filename)
       timer.tick()
       if (!hasSentResponse && Date.now() >= deadline) {
-        hasSentResponse = true
+        sendResponse()
+      }
+    }
+
+    if (isClassifying) {
+      sendResponse()
+      return
+    }
+    isClassifying = true
+
+    timer.next('load unclassified (uncached)')
+    timer.setEstimateProgress(newFilenames.length)
+    for (let filename of newFilenames) {
+      await addImage(filename)
+      timer.tick()
+      if (!hasSentResponse && Date.now() >= deadline) {
         sendResponse()
       }
     }
     timer.end()
 
-    if (!hasSentResponse) {
-      sendResponse()
-    }
+    sendResponse()
 
     function sendResponse() {
+      if (hasSentResponse) {
+        return
+      }
+      hasSentResponse = true
       res.json({
         classes: Array.from(
           groupBy(image => image.label, images).entries(),
@@ -177,6 +198,8 @@ app.get('/unclassified', async (req, res) => {
     }
   } catch (error) {
     res.json({ error: String(error) })
+  } finally {
+    isClassifying = false
   }
 })
 

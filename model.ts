@@ -1,6 +1,7 @@
 import { mkdirSync, readdirSync } from 'fs'
 import { join } from 'path'
 import {
+  EmbeddingCache,
   PreTrainedImageModels,
   loadImageClassifierModel,
   loadImageModel,
@@ -28,6 +29,11 @@ export async function loadModels() {
   let imageModelSpec = PreTrainedImageModels.mobilenet['mobilenet-v3-large-100']
   let { db } = await import('./db')
 
+  let has_embedding = db
+    .prepare<string, number>(
+      /* sql */ `select (case when embedding is null then 0 else 1 end) as count from image where filename = ?`,
+    )
+    .pluck()
   let select_embedding = db
     .prepare<string, string | null>(
       /* sql */ `select embedding from image where filename = ?`,
@@ -45,24 +51,39 @@ export async function loadModels() {
   >(
     /* sql */ `insert into image (filename, embedding) values (:filename, :embedding)`,
   )
+  let select_cached_images = db
+    .prepare<void[], string>(
+      /* sql */ `
+  select filename from image where embedding is not null
+  `,
+    )
+    .pluck()
+
+  let embeddingCache = {
+    keys(): string[] {
+      return select_cached_images.all()
+    },
+    has(filename: string) {
+      return has_embedding.get(filename)! == 1
+    },
+    get(filename: string) {
+      let embedding = select_embedding.get(filename)
+      if (!embedding) return null
+      return embedding.split(',').map(s => +s)
+    },
+    set(filename: string, values: number[]) {
+      let embedding = values.join(',')
+      if (update_embedding.run({ filename, embedding }).changes == 1) {
+        return
+      }
+      insert_embedding.run({ filename, embedding })
+    },
+  }
 
   let baseModel = await loadImageModel({
     dir: './saved_models/base_model',
     spec: imageModelSpec,
-    cache: {
-      get(filename) {
-        let embedding = select_embedding.get(filename)
-        if (!embedding) return null
-        return embedding.split(',').map(s => +s)
-      },
-      set(filename, values) {
-        let embedding = values.join(',')
-        if (update_embedding.run({ filename, embedding }).changes == 1) {
-          return
-        }
-        insert_embedding.run({ filename, embedding })
-      },
-    },
+    cache: embeddingCache,
   })
   let classifierModel = await loadImageClassifierModel({
     modelDir: './saved_models/classifier_model',
@@ -71,5 +92,9 @@ export async function loadModels() {
     classNames,
     hiddenLayers: [imageModelSpec.features],
   })
-  return { baseModel, classifierModel }
+  return {
+    embeddingCache,
+    baseModel,
+    classifierModel,
+  }
 }

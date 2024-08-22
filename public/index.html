@@ -141,7 +141,7 @@
         data-template="unclassified"
         data-bind="classes"
       >
-        loading...
+        (not auto loaded)
       </div>
       <template data-name="unclassified">
         <div class="unclassified">
@@ -337,7 +337,6 @@
           })
         })
       }
-      loadUnclassified()
 
       function loadClassified() {
         classifiedList.textContent = 'loading...'

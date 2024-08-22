@@ -21,6 +21,7 @@ import { resolveFile } from './file'
 import { mkdirSync } from 'fs'
 import { startTimer } from '@beenotung/tslib/timer'
 import { SECOND } from '@beenotung/tslib/time'
+import { later } from '@beenotung/tslib/async/wait'
 
 let app = express()
 
@@ -160,6 +161,7 @@ app.get('/unclassified', async (req, res) => {
       if (!hasSentResponse && Date.now() >= deadline) {
         sendResponse()
       }
+      await later(0)
     }
 
     if (isClassifying) {

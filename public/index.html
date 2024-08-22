@@ -89,6 +89,9 @@
         display: flex;
         flex-direction: column;
       }
+      button key {
+        text-decoration: underline;
+      }
     </style>
     <script
       type="module"
@@ -222,6 +225,9 @@
     <div id="correctClassDialog">
       <div class="section-header">
         Correct Label (<span id="correctCount">0</span>)
+        <button id="undoButton" onclick="undo()" disabled>
+          <key>u</key>ndo<span id="undoStatus"></span>
+        </button>
       </div>
       <div id="correctList" data-template="button" data-bind="buttons"></div>
       <div id="correctResult"></div>
@@ -232,6 +238,21 @@
         let res = await fetch(url)
         let json = await res.json()
         doneFn(json)
+      }
+      async function post(url, body) {
+        try {
+          let res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          })
+          let json = await res.json()
+          return json
+        } catch (error) {
+          return {
+            error: String(error),
+          }
+        }
       }
 
       get('/actions', json => {
@@ -309,15 +330,12 @@
           '#classifiedList .selected, #unclassifiedList .selected',
         )
         let images = Array.from(selectedImgs, img => img.getAttribute('src'))
-        let res = await fetch('/correct', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            className,
-            images,
-          }),
+        undoStack.push({ className, images })
+        undoButton.disabled = false
+        let json = await post('/correct', {
+          className,
+          images,
         })
-        let json = await res.json()
         if (json.error) {
           button.textContent = `[${index + 1}] ${className} (error)`
           correctResult.textContent = json.error
@@ -392,12 +410,47 @@
       }
       loadClassified()
 
+      let undoStack = []
+      async function undo() {
+        if (undoStack.length == 0) {
+          return
+        }
+        let { className, images } = undoStack.pop()
+        try {
+          undoStatus.textContent = 'ing...'
+          let res = await fetch('/correct', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              images,
+            }),
+          })
+          let json = await post('/undo', { className, images })
+          if (json.error) {
+            throw json.error
+          }
+          undoStatus.textContent = ' (done)'
+          undoButton.disabled = undoStack.length == 0
+          correctResult.textContent = ''
+        } catch (error) {
+          undoStack.push({ className, images })
+          undoStatus.textContent = ' (error)'
+          correctResult.textContent = String(error)
+        }
+      }
+
       window.addEventListener('keypress', event => {
+        if (event.key == 'u') {
+          undo()
+          event.preventDefault()
+          return
+        }
         let index = event.key - 1
         let buttons = correctList.querySelectorAll('button[data-value]')
         let button = buttons[index]
         if (!button) return
         correctLabel(button)
+        event.preventDefault()
       })
 
       function scrollToTop() {

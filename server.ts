@@ -231,6 +231,27 @@ app.post('/correct', async (req, res) => {
   }
 })
 
+app.post('/undo', async (req, res) => {
+  try {
+    let { className, images } = req.body
+    for (let destFile of images) {
+      destFile = join('.', destFile)
+      if (
+        !!destFile.startsWith('classified/') &&
+        !!destFile.startsWith('unclassified/')
+      ) {
+        continue
+      }
+      let filename = basename(destFile)
+      let srcFile = join('dataset', className, filename)
+      await rename(srcFile, destFile)
+    }
+    res.json({})
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
+
 export function startServer(port: number) {
   app.listen(port, () => {
     print(port)

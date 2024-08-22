@@ -200,7 +200,13 @@
     </div>
     <script src="/data-template/base.js"></script>
     <script>
-      getJSON('/actions', json => {
+      async function get(url, doneFn) {
+        let res = await fetch(url)
+        let json = await res.json()
+        doneFn(json)
+      }
+
+      get('/actions', json => {
         actionList.textContent = ''
         renderTemplate(actionList, {
           actions: json.actions.map(action => {
@@ -227,17 +233,19 @@
       })
 
       function loadStats() {
-        getJSON('/stats', json => {
-          statsList.querySelectorAll('tbody').forEach(tbody => {
-            for (;;) {
-              let row = tbody.rows[1]
-              if (row) {
-                row.remove()
-              } else {
-                break
-              }
+        statsList.querySelectorAll('tbody').forEach(tbody => {
+          for (;;) {
+            let row = tbody.rows[1]
+            if (row) {
+              row.remove()
+            } else {
+              break
             }
-          })
+          }
+          tbody.rows[0].cells[0].textContent = 'loading...'
+          tbody.rows[0].cells[1].textContent = ''
+        })
+        get('/stats', json => {
           renderData(statsList, json.stats)
           statsList.hidden = false
           let classNames = Array.from(
@@ -307,7 +315,8 @@
       }
 
       function loadUnclassified() {
-        getJSON('/unclassified', json => {
+        unclassifiedList.textContent = 'loading...'
+        get('/unclassified', json => {
           renderTemplate(unclassifiedList, {
             classes: json.classes.map(({ className, images }) => ({
               className,
@@ -331,7 +340,8 @@
       loadUnclassified()
 
       function loadClassified() {
-        getJSON('/classified', json => {
+        classifiedList.textContent = 'loading...'
+        get('/classified', json => {
           renderTemplate(classifiedList, {
             classes: json.classes.map(({ className, filenames }) => {
               return {

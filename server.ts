@@ -116,9 +116,9 @@ async function scanDir2Files(dir: string) {
 let isClassifying = false
 
 app.get('/unclassified', async (req, res) => {
+  let hasSentResponse = false
   try {
     let { embeddingCache, baseModel, classifierModel } = await modelsCache.get()
-    let hasSentResponse = false
     let images: {
       filename: string
       label: string
@@ -199,7 +199,10 @@ app.get('/unclassified', async (req, res) => {
       })
     }
   } catch (error) {
-    res.json({ error: String(error) })
+    console.error(error)
+    if (!hasSentResponse) {
+      res.json({ error: String(error) })
+    }
   } finally {
     isClassifying = false
   }

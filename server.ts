@@ -4,6 +4,7 @@ import { main as train } from './train'
 import { main as retrain } from './retrain'
 import { main as classify } from './classify'
 import { main as unclassify } from './unclassify'
+import { main as renameByContentHash } from './rename-by-content-hash'
 import { basename, join } from 'path'
 import { readdir, rename } from 'fs/promises'
 import { datasetCache, modelsCache } from './cache'
@@ -40,6 +41,7 @@ app.use(express.urlencoded({ extended: false }))
 /***********/
 
 let actions = {
+  renameByContentHash,
   loadModel: modelsCache.load,
   loadDataset: datasetCache.load,
   train,

@@ -19,6 +19,7 @@ import { groupBy } from '@beenotung/tslib/functional'
 import { env } from './env'
 import { resolveFile } from './file'
 import { mkdirSync } from 'fs'
+import { startTimer } from '@beenotung/tslib/timer'
 
 let app = express()
 
@@ -122,15 +123,9 @@ app.get('/unclassified', async (req, res) => {
       confidence: number
       results: ClassificationResult[]
     }[] = []
-    let n = filenames.length
-    let i = 0
-    let nextI = 0
+    let timer = startTimer('load unclassified')
+    timer.setEstimateProgress(filenames.length)
     for (let filename of filenames) {
-      i++
-      if (i >= nextI) {
-        process.stderr.write(`\rload unclassified: ${i}/${n}`)
-        nextI += n / 100
-      }
       let embedding = embeddingCache.get(filename)
       if (!embedding) {
         let file = join('unclassified', filename)
@@ -150,8 +145,9 @@ app.get('/unclassified', async (req, res) => {
         confidence: result.confidence,
         results,
       })
+      timer.tick()
     }
-    process.stderr.write(`\rload unclassified: ${i}/${n}\n`)
+    timer.end()
     res.json({
       classes: Array.from(
         groupBy(image => image.label, images).entries(),

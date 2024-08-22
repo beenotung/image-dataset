@@ -85,7 +85,11 @@
   </head>
   <body>
     <template data-name="button">
-      <button data-text="text" data-onclick="onclick"></button>
+      <button
+        data-text="text"
+        data-value="className"
+        data-onclick="onclick"
+      ></button>
     </template>
     <section>
       <div class="section-header">Actions</div>
@@ -255,46 +259,13 @@
             ]),
           )
           renderTemplate(correctList, {
-            buttons: classNames.map(className => {
+            buttons: classNames.map((className, index) => {
               return {
-                text: className,
-                async onclick(event) {
+                text: `[${index + 1}] ${className}`,
+                className,
+                onclick(event) {
                   let button = event.currentTarget
-                  button.textContent = className + ' (correcting...)'
-                  let selectedImgs = document.querySelectorAll(
-                    '#classifiedList .selected, #unclassifiedList .selected',
-                  )
-                  let images = Array.from(selectedImgs, img =>
-                    img.getAttribute('src'),
-                  )
-                  let res = await fetch('/correct', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      className,
-                      images,
-                    }),
-                  })
-                  let json = await res.json()
-                  if (json.error) {
-                    button.textContent = className + ' (error)'
-                    correctResult.textContent = json.error
-                    return
-                  }
-                  button.textContent = className + ' (done)'
-                  correctResult.textContent = ''
-                  correctCount.textContent = 0
-                  for (let img of selectedImgs) {
-                    img.parentElement.remove()
-                  }
-                  document
-                    .querySelectorAll(
-                      '#classifiedList .classified, #unclassifiedList .unclassified',
-                    )
-                    .forEach(div => {
-                      div.querySelector('[data-text="count"]').textContent =
-                        div.querySelectorAll('img').length
-                    })
+                  correctLabel(button)
                 },
               }
             }),
@@ -302,6 +273,47 @@
         })
       }
       loadStats()
+
+      async function correctLabel(button) {
+        let className = button.value
+        if (!className) return
+
+        let index = Array.from(button.parentElement.children).indexOf(button)
+
+        button.textContent = `[${index + 1}] ${className} (correcting...)`
+        let selectedImgs = document.querySelectorAll(
+          '#classifiedList .selected, #unclassifiedList .selected',
+        )
+        let images = Array.from(selectedImgs, img => img.getAttribute('src'))
+        let res = await fetch('/correct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            className,
+            images,
+          }),
+        })
+        let json = await res.json()
+        if (json.error) {
+          button.textContent = `[${index + 1}] ${className} (error)`
+          correctResult.textContent = json.error
+          return
+        }
+        button.textContent = `[${index + 1}] ${className} (done)`
+        correctResult.textContent = ''
+        correctCount.textContent = 0
+        for (let img of selectedImgs) {
+          img.parentElement.remove()
+        }
+        document
+          .querySelectorAll(
+            '#classifiedList .classified, #unclassifiedList .unclassified',
+          )
+          .forEach(div => {
+            div.querySelector('[data-text="count"]').textContent =
+              div.querySelectorAll('img').length
+          })
+      }
 
       function toggleImage(event) {
         let img = event.currentTarget
@@ -355,6 +367,14 @@
         })
       }
       loadClassified()
+
+      window.addEventListener('keypress', event => {
+        let index = event.key - 1
+        let buttons = correctList.querySelectorAll('button[data-value]')
+        let button = buttons[index]
+        if (!button) return
+        correctLabel(button)
+      })
     </script>
   </body>
 </html>

@@ -178,6 +178,7 @@ app.get('/unclassified', async (req, res) => {
       if (!hasSentResponse && Date.now() >= deadline) {
         sendResponse()
       }
+      await later(0)
     }
     timer.end()
 

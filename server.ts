@@ -192,6 +192,6 @@ export function startServer(port: number) {
   })
 }
 
-if (process.argv[1] == __filename) {
+if (basename(process.argv[1]) == basename(__filename)) {
   startServer(env.PORT)
 }

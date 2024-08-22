@@ -121,7 +121,15 @@ app.get('/unclassified', async (req, res) => {
       confidence: number
       results: ClassificationResult[]
     }[] = []
+    let n = filenames.length
+    let i = 0
+    let nextI = 0
     for (let filename of filenames) {
+      i++
+      if (i >= nextI) {
+        process.stderr.write(`\rload unclassified: ${i}/${n}`)
+        nextI += n / 100
+      }
       let embedding = embeddingCache.get(filename)
       if (!embedding) {
         let file = join('unclassified', filename)
@@ -142,6 +150,7 @@ app.get('/unclassified', async (req, res) => {
         results,
       })
     }
+    process.stderr.write(`\rload unclassified: ${i}/${n}\n`)
     res.json({
       classes: Array.from(
         groupBy(image => image.label, images).entries(),

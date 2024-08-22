@@ -27,6 +27,7 @@ app.use(
   '/data-template',
   express.static(resolveFile('node_modules/data-template')),
 )
+app.use('/ionicons', express.static(resolveFile('node_modules/ionicons')))
 app.use('/classified', express.static('classified'))
 app.use('/unclassified', express.static('unclassified'))
 app.use(express.static(resolveFile('public')))

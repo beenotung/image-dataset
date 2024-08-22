@@ -81,9 +81,33 @@
         backdrop-filter: blue(3px);
         width: fit-content;
       }
+      .fabs.bottom.right {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        font-size: 2rem;
+        display: flex;
+        flex-direction: column;
+      }
     </style>
+    <script
+      type="module"
+      src="/ionicons/dist/ionicons/ionicons.esm.js"
+    ></script>
+    <script nomodule src="/ionicons/dist/ionicons/ionicons.js"></script>
   </head>
   <body>
+    <div class="fabs bottom right">
+      <ion-icon
+        onclick="scrollToTop()"
+        name="chevron-up-circle-outline"
+      ></ion-icon>
+      <ion-icon
+        onclick="scrollToBottom()"
+        name="chevron-down-circle-outline"
+      ></ion-icon>
+    </div>
+
     <template data-name="button">
       <button
         data-text="text"
@@ -375,6 +399,19 @@
         if (!button) return
         correctLabel(button)
       })
+
+      function scrollToTop() {
+        document.body.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+      }
+      function scrollToBottom() {
+        document.body.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end',
+        })
+      }
     </script>
   </body>
 </html>

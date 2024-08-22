@@ -1,31 +1,34 @@
 import { mkdirSync, readdirSync } from 'fs'
 import { join } from 'path'
 import {
-  EmbeddingCache,
   PreTrainedImageModels,
   loadImageClassifierModel,
   loadImageModel,
 } from 'tensorflow-helpers'
 
-mkdirSync('dataset', { recursive: true })
-
-export let classNames: string[] = readdirSync('dataset')
-
-if (classNames.length == 0) {
-  console.error('Error: no class names found in dataset directory')
-  console.error('Example: others, cat, dog, both')
-  process.exit(1)
-}
-
-export function setClassNames(names: string[]) {
-  classNames.length = 0
-  for (let className of names) {
-    mkdirSync(join('dataset', className), { recursive: true })
-    classNames.push(className)
+function createClassNameDirectories(dir: string, classNames: string[]) {
+  for (let className of classNames) {
+    mkdirSync(join(dir, className), { recursive: true })
   }
 }
 
+export function getClassNames(): string[] {
+  mkdirSync('dataset', { recursive: true })
+  let classNames: string[] = readdirSync('dataset')
+  if (classNames.length == 0) {
+    console.error('Error: no class names found in dataset directory')
+    console.error('Example: others, cat, dog, both')
+    process.exit(1)
+  }
+  return classNames
+}
+
 export async function loadModels() {
+  let classNames = getClassNames()
+
+  createClassNameDirectories('dataset', classNames)
+  createClassNameDirectories('classified', classNames)
+
   let imageModelSpec = PreTrainedImageModels.mobilenet['mobilenet-v3-large-100']
   let { db } = await import('./db')
 
@@ -92,6 +95,7 @@ export async function loadModels() {
     classNames,
     hiddenLayers: [imageModelSpec.features],
   })
+
   return {
     embeddingCache,
     baseModel,

@@ -20,6 +20,7 @@ import { env } from './env'
 import { resolveFile } from './file'
 import { mkdirSync } from 'fs'
 import { startTimer } from '@beenotung/tslib/timer'
+import { SECOND } from '@beenotung/tslib/time'
 
 let app = express()
 
@@ -123,6 +124,12 @@ app.get('/unclassified', async (req, res) => {
       confidence: number
       results: ClassificationResult[]
     }[] = []
+
+    let hasSentResponse = false
+
+    let deadlineTimeout = 5 * SECOND
+    let deadline = Date.now() + deadlineTimeout
+
     let timer = startTimer('load unclassified')
     timer.setEstimateProgress(filenames.length)
     for (let filename of filenames) {
@@ -146,17 +153,28 @@ app.get('/unclassified', async (req, res) => {
         results,
       })
       timer.tick()
+      if (!hasSentResponse && Date.now() >= deadline) {
+        hasSentResponse = true
+        sendResponse()
+      }
     }
     timer.end()
-    res.json({
-      classes: Array.from(
-        groupBy(image => image.label, images).entries(),
-        ([className, images]) => ({
-          className,
-          images,
-        }),
-      ),
-    })
+
+    if (!hasSentResponse) {
+      sendResponse()
+    }
+
+    function sendResponse() {
+      res.json({
+        classes: Array.from(
+          groupBy(image => image.label, images).entries(),
+          ([className, images]) => ({
+            className,
+            images,
+          }),
+        ),
+      })
+    }
   } catch (error) {
     res.json({ error: String(error) })
   }

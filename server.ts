@@ -130,7 +130,7 @@ app.get('/unclassified', async (req, res) => {
       let embedding = embeddingCache.get(filename)
       if (!embedding) {
         let file = join('unclassified', filename)
-        embedding = await baseModel.inferEmbeddingAsync(file)
+        embedding = await baseModel.imageFileToEmbedding(file)
         embeddingCache.set(filename, embedding)
       }
       let tensors = tf.tidy(() =>

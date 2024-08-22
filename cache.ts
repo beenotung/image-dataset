@@ -22,5 +22,5 @@ export let modelsCache = makeCache(() => loadModels())
 
 export let datasetCache = makeCache(async () => {
   let models = await modelsCache.get()
-  return models.classifierModel.loadDatasetFromDirectoryAsync({ cache: true })
+  return models.classifierModel.loadDatasetFromDirectory()
 })

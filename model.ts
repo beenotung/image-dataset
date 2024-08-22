@@ -29,6 +29,7 @@ export async function loadModels() {
   let baseModel = await loadImageModel({
     dir: './saved_models/base_model',
     spec: imageModelSpec,
+    cache: true,
   })
   let classifierModel = await loadImageClassifierModel({
     modelDir: './saved_models/classifier_model',

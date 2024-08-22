@@ -26,7 +26,7 @@ export async function main() {
   timer.setEstimateProgress(filenames.length)
   for (let filename of filenames) {
     let src = join(unclassifiedDir, filename)
-    let result = await classifierModel.classifyAsync(src)
+    let result = await classifierModel.classifyImageFile(src)
     let className = topClassifyResult(result).label
     let dest = join(classifiedDir, className, filename)
     await rename(src, dest)

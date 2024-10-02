@@ -63,6 +63,9 @@ export function analysis() {
   }
   for (let row of rows) {
     let dir = join(config.rootDir, row.keyword)
+    if (!existsSync(dir)) {
+      continue
+    }
     let extra = scanImageDir(dir)
     Object.assign(row, extra)
   }

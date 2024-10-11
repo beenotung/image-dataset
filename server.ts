@@ -132,6 +132,9 @@ app.get('/unclassified', async (req, res) => {
     let images: UnclassifiedImage[] = []
 
     let filenames = await readdir('unclassified')
+    filenames = filenames.filter(
+      name => !name.endsWith('.txt') && !name.endsWith('.log'),
+    )
     let newFilenames: string[] = []
 
     let deadlineTimeout = 3 * SECOND

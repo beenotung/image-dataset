@@ -68,7 +68,7 @@
     "listening-on": "^2.0.9",
     "playwright": "^1.46.1",
     "populate-env": "^2.1.0",
-    "tensorflow-helpers": "^0.9.10"
+    "tensorflow-helpers": "^0.9.11"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",

@@ -17,6 +17,7 @@ import { mkdirSync } from 'fs'
 import { startTimer } from '@beenotung/tslib/timer'
 import { SECOND } from '@beenotung/tslib/time'
 import { later } from '@beenotung/tslib/async/wait'
+import { compare } from '@beenotung/tslib/compare'
 
 let app = express()
 
@@ -196,7 +197,7 @@ app.get('/unclassified', async (req, res) => {
             className,
             images,
           }),
-        ),
+        ).sort((a, b) => compare(a.className, b.className)),
       })
     }
   } catch (error) {

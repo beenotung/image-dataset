@@ -6,7 +6,8 @@ import { main as classify } from './classify'
 import { main as unclassify } from './unclassify'
 import { main as renameByContentHash } from './rename-by-content-hash'
 import { basename, join } from 'path'
-import { readdir, rename } from 'fs/promises'
+import { rename } from 'fs/promises'
+import { getDirFilenames } from '@beenotung/tslib/fs'
 import { datasetCache, modelsCache } from './cache'
 import { ClassificationResult, topClassifyResult } from 'tensorflow-helpers'
 import { groupBy } from '@beenotung/tslib/functional'
@@ -74,12 +75,12 @@ for (let [name, fn] of Object.entries(actions)) {
 /*********/
 
 async function countDirFiles(dir: string) {
-  let filenames = await readdir(dir)
+  let filenames = await getDirFilenames(dir)
   return filenames.length
 }
 
 async function countDir2Files(dir: string) {
-  let classNames = await readdir(dir)
+  let classNames = await getDirFilenames(dir)
   return Promise.all(
     classNames.map(async className => ({
       className,
@@ -103,12 +104,12 @@ app.get('/stats', async (req, res) => {
 /************/
 
 async function scanDir2Files(dir: string) {
-  let classNames = await readdir(dir)
+  let classNames = await getDirFilenames(dir)
   return Promise.all(
     classNames.map(async className => {
       return {
         className,
-        filenames: await readdir(join(dir, className)),
+        filenames: await getDirFilenames(join(dir, className)),
       }
     }),
   )
@@ -131,7 +132,7 @@ app.get('/unclassified', async (req, res) => {
 
     let images: UnclassifiedImage[] = []
 
-    let filenames = await readdir('unclassified')
+    let filenames = await getDirFilenames('unclassified')
     filenames = filenames.filter(
       name => !name.endsWith('.txt') && !name.endsWith('.log'),
     )

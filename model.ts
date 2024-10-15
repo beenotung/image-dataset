@@ -1,5 +1,6 @@
-import { mkdirSync, readdirSync } from 'fs'
+import { mkdirSync } from 'fs'
 import { join } from 'path'
+import { getDirFilenamesSync } from '@beenotung/tslib/fs'
 import {
   PreTrainedImageModels,
   loadImageClassifierModel,
@@ -14,7 +15,7 @@ function createClassNameDirectories(dir: string, classNames: string[]) {
 
 export function getClassNames(): string[] {
   mkdirSync('dataset', { recursive: true })
-  let classNames: string[] = readdirSync('dataset')
+  let classNames: string[] = getDirFilenamesSync('dataset')
   if (classNames.length == 0) {
     console.error('Error: no class names found in dataset directory')
     console.error('Example: others, cat, dog, both')

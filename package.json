@@ -50,7 +50,7 @@
     "db:gen-proxy": "erd-to-proxy < erd.txt > proxy.ts"
   },
   "dependencies": {
-    "@beenotung/tslib": "^23.10.1",
+    "@beenotung/tslib": "^24.0.0",
     "@tensorflow/tfjs-node": "^4.20.0",
     "better-sqlite3": "^11.2.1",
     "better-sqlite3-proxy": "^2.10.0",

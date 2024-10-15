@@ -1,9 +1,10 @@
-import { existsSync, readdirSync } from 'fs'
+import { existsSync } from 'fs'
 import { config } from './config'
 import { db } from './db'
 import { csv_to_table_text, json_to_csv } from '@beenotung/tslib/csv'
 import { join } from 'path'
 import { format_percentage } from '@beenotung/tslib/format'
+import { getDirFilenamesSync } from '@beenotung/tslib/fs'
 
 let select_counts = db.prepare<
   void[],
@@ -29,7 +30,7 @@ order by keyword_id asc
 `)
 
 function scanImageDir(dir: string) {
-  let filenames = readdirSync(dir)
+  let filenames = getDirFilenamesSync(dir)
 
   let downloaded = filenames.length
   let removed = 0
@@ -38,7 +39,7 @@ function scanImageDir(dir: string) {
   for (let removeDirname of removeDirnames) {
     downloaded--
     if (filenames.includes(removeDirname)) {
-      removed += readdirSync(join(dir, removeDirname)).length
+      removed += getDirFilenamesSync(join(dir, removeDirname)).length
     }
   }
 
@@ -54,7 +55,7 @@ function scanImageDir(dir: string) {
 export function analysis() {
   let rows: { keyword: string }[] = select_counts.all()
   if (rows.length == 0 && existsSync(config.rootDir)) {
-    let keywords = readdirSync(config.rootDir)
+    let keywords = getDirFilenamesSync(config.rootDir)
     rows = keywords.map(keyword => ({ keyword }))
   }
   if (rows.length == 0) {

@@ -9,7 +9,7 @@ Tool to build image dataset: collect, classify, review
 - [x] Collect images from Google Search
 - [x] Augment images to increase robustness (using [augment-image](https://github.com/beenotung/augment-image) cli)
 - [x] Classify images with transfer learning
-- [x] Review the classify result to ensure data quality
+- [x] Review the classify result to ensure data quality and evaluate model accuracy
 
 ## Features
 

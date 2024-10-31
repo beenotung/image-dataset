@@ -1,9 +1,6 @@
 import { getDirFilenames } from '@beenotung/tslib/fs'
 import { basename, join } from 'path'
-import {
-  isContentHash,
-  renameFileByContentHash,
-} from 'tensorflow-helpers/dist/file'
+import { isContentHash, renameFileByContentHash } from 'tensorflow-helpers'
 import { db } from './db'
 import { startTimer } from '@beenotung/tslib/timer'
 

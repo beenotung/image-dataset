@@ -2,7 +2,7 @@ import express from 'express'
 import { print } from 'listening-on'
 import { main as train } from './train'
 import { main as retrain } from './retrain'
-import { main as classify } from './classify'
+import { main as classify, stopClassify } from './classify'
 import { main as unclassify } from './unclassify'
 import { main as renameByContentHash } from './rename-by-content-hash'
 import { basename, join } from 'path'
@@ -46,8 +46,12 @@ let actions = {
     unclassifiedImageCache.clear()
     return modelsCache.load()
   },
-  loadDataset: datasetCache.load,
+  loadDataset() {
+    stopClassify()
+    return datasetCache.load()
+  },
   train() {
+    stopClassify()
     unclassifiedImageCache.clear()
     return train()
   },

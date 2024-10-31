@@ -11,6 +11,12 @@ let classifiedDir = 'classified'
 
 mkdirSync(unclassifiedDir, { recursive: true })
 
+let running = false
+
+export function stopClassify() {
+  running = false
+}
+
 export async function main() {
   let timer = startTimer('load models')
   let { classifierModel } = await modelsCache.get()
@@ -25,7 +31,11 @@ export async function main() {
 
   timer.next('classify images')
   timer.setEstimateProgress(filenames.length)
+  running = true
   for (let filename of filenames) {
+    if (!running) {
+      break
+    }
     let src = join(unclassifiedDir, filename)
     let result = await classifierModel.classifyImageFile(src)
     let className = topClassifyResult(result).label

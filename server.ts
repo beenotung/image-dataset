@@ -3,7 +3,7 @@ import { print } from 'listening-on'
 import { main as train } from './train'
 import { main as retrain } from './retrain'
 import { main as classify, stopClassify } from './classify'
-import { main as unclassify } from './unclassify'
+import { main as unclassify, unclassifyDir } from './unclassify'
 import { main as renameByContentHash } from './rename-by-content-hash'
 import { basename, join } from 'path'
 import { rename } from 'fs/promises'
@@ -74,6 +74,19 @@ for (let [name, fn] of Object.entries(actions)) {
     }
   })
 }
+
+app.post('/unclassifyDataset', async (req, res) => {
+  try {
+    let className = req.query.className
+    if (!className || typeof className != 'string') {
+      throw new Error('className must be given in req.query')
+    }
+    unclassifyDir(join('dataset', className))
+    res.json({})
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
 
 /*********/
 /* stats */

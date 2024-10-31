@@ -140,6 +140,9 @@
               <tr data-value="dataset">
                 <td data-text="count"></td>
                 <td data-text="className"></td>
+                <td>
+                  <button onclick="unclassifyDataset(event)">unclassify</button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -392,6 +395,19 @@
           })
           button.textContent = 'select all'
         }
+      }
+
+      async function unclassifyDataset(event) {
+        let tr = event.currentTarget.closest('tr')
+        let className = tr.cells[1].textContent
+        let json = await post(
+          '/unclassifyDataset?' + new URLSearchParams({ className }),
+        )
+        if (json.error) {
+          alert(json.error)
+          return
+        }
+        tr.cells[0].textContent = 0
       }
 
       function loadUnclassified() {

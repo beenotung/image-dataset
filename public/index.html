@@ -178,7 +178,10 @@
         <div class="unclassified">
           <div data-text="className"></div>
           <details>
-            <summary><span data-text="count"></span> images</summary>
+            <summary>
+              <span data-text="count"></span> images
+              <button onclick="toggleAllImage(event)">select all</button>
+            </summary>
             <div class="img-list">
               <div data-value="images">
                 <img
@@ -208,7 +211,10 @@
         <div class="classified">
           <div data-text="className"></div>
           <details>
-            <summary><span data-text="count"></span> images</summary>
+            <summary>
+              <span data-text="count"></span> images
+              <button onclick="toggleAllImage(event)">select all</button>
+            </summary>
             <div class="img-list">
               <div data-value="images">
                 <img
@@ -365,6 +371,26 @@
         } else {
           img.classList.remove('selected')
           correctCount.textContent--
+        }
+      }
+
+      function toggleAllImage(event) {
+        let button = event.currentTarget
+        let imgList = button.closest('details').querySelector('.img-list')
+        if (button.textContent == 'select all') {
+          imgList.querySelectorAll('img').forEach(img => {
+            if (!img.classList.contains('selected')) {
+              img.classList.add('selected')
+              correctCount.textContent++
+            }
+          })
+          button.textContent = 'unselect all'
+        } else {
+          imgList.querySelectorAll('img.selected').forEach(img => {
+            img.classList.remove('selected')
+            correctCount.textContent--
+          })
+          button.textContent = 'select all'
         }
       }
 

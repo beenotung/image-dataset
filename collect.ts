@@ -127,11 +127,18 @@ export async function collectByKeyword(keyword: string) {
   }
 
   let lastCount = 0
+  let attempt = 0
   for (;;) {
     let images = await collectImages()
     let count = images.length
+    if (count != lastCount) {
+      attempt = 0
+    }
     if (count > 0 && count == lastCount) {
-      break
+      attempt++
+      if (attempt > 3) {
+        break
+      }
     }
     cli.update(`searching "${keyword}": ${count} images ...`)
     for (let image of images.slice(lastCount)) {

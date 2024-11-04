@@ -3,7 +3,7 @@ import { print } from 'listening-on'
 import { main as train } from './train'
 import { main as retrain } from './retrain'
 import { main as classify, stopClassify } from './classify'
-import { main as unclassify, unclassifyDir } from './unclassify'
+import { main as unclassifyAll, unclassifyDir } from './unclassify'
 import { main as renameByContentHash } from './rename-by-content-hash'
 import { basename, join } from 'path'
 import { rename } from 'fs/promises'
@@ -57,7 +57,7 @@ let actions = {
   },
   retrain,
   classify,
-  unclassify,
+  unclassifyAll,
 }
 
 app.get('/actions', (req, res) => {
@@ -75,14 +75,16 @@ for (let [name, fn] of Object.entries(actions)) {
   })
 }
 
-app.post('/unclassifyDataset', async (req, res) => {
+app.post('/unclassify', async (req, res) => {
   try {
-    let className = req.query.className
-    if (!className || typeof className != 'string') {
-      throw new Error('className must be given in req.query')
+    let dir = req.query.dir
+    if (!dir || typeof dir != 'string') {
+      throw new Error('dir must be given in req.query')
     }
-    unclassifyDir(join('dataset', className))
-    res.json({})
+    unclassifyDir(dir)
+    res.json({
+      total: await countDirFiles('unclassified'),
+    })
   } catch (error) {
     res.json({ error: String(error) })
   }
@@ -98,11 +100,11 @@ async function countDirFiles(dir: string) {
 }
 
 async function countDir2Files(dir: string) {
-  let classNames = await getDirFilenames(dir)
+  let dirnames = await getDirFilenames(dir)
   return Promise.all(
-    classNames.map(async className => ({
-      className,
-      count: await countDirFiles(join(dir, className)),
+    dirnames.map(async dirname => ({
+      dirname,
+      count: await countDirFiles(join(dir, dirname)),
     })),
   )
 }
@@ -112,6 +114,7 @@ app.get('/stats', async (req, res) => {
     stats: {
       dataset: await countDir2Files('dataset'),
       classified: await countDir2Files('classified'),
+      downloaded: await countDir2Files('downloaded'),
       unclassified: await countDirFiles('unclassified'),
     },
   })

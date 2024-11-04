@@ -24,12 +24,30 @@
       }
       #statsList {
         display: flex;
+        flex-direction: row;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+      }
+      #statsList > div {
+        display: flex;
         flex-direction: column;
         gap: 0.5rem;
         padding: 0.5rem 0;
       }
+      .stats-title {
+        font-weight: bold;
+        display: inline-block;
+        background-color: #faebd780;
+        padding: 0.25rem 0.5rem;
+      }
       #statsList table {
-        margin-inline-start: 1rem;
+        margin-block-start: 0.25rem;
+        border-collapse: collapse;
+      }
+      #statsList table th,
+      #statsList table td {
+        border: 1px solid black;
+        padding: 0.25rem 0.5rem;
       }
       #classifiedList [data-text='className'],
       #unclassifiedList [data-text='className'] {
@@ -130,40 +148,74 @@
       <button onclick="loadStats()">reload</button>
       <div id="statsList" hidden>
         <div>
-          dataset:
-          <table>
-            <thead>
-              <th>count</th>
-              <th>label</th>
-            </thead>
-            <tbody>
-              <tr data-value="dataset">
-                <td data-text="count"></td>
-                <td data-text="className"></td>
-                <td>
-                  <button onclick="unclassifyDataset(event)">unclassify</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div>
+            <div class="stats-title">downloaded:</div>
+            <table>
+              <thead>
+                <th>count</th>
+                <th>search term</th>
+              </thead>
+              <tbody>
+                <tr data-value="downloaded">
+                  <td data-text="count"></td>
+                  <td data-text="dirname"></td>
+                  <td>
+                    <button onclick="unclassifyDir(event, 'downloaded')">
+                      unclassify
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
         <div>
-          classified:
-          <table>
-            <thead>
-              <th>count</th>
-              <th>label</th>
-            </thead>
-            <tbody>
-              <tr data-value="classified">
-                <td data-text="count"></td>
-                <td data-text="className"></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div>
-          unclassified: <span data-text="unclassified">loading...</span>
+          <div>
+            <div class="stats-title">dataset:</div>
+            <table>
+              <thead>
+                <th>count</th>
+                <th>label</th>
+              </thead>
+              <tbody>
+                <tr data-value="dataset">
+                  <td data-text="count"></td>
+                  <td data-text="dirname"></td>
+                  <td>
+                    <button onclick="unclassifyDir(event, 'dataset')">
+                      unclassify
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <div class="stats-title">classified:</div>
+            <table>
+              <thead>
+                <th>count</th>
+                <th>label</th>
+              </thead>
+              <tbody>
+                <tr data-value="classified">
+                  <td data-text="count"></td>
+                  <td data-text="dirname"></td>
+                  <td>
+                    <button onclick="unclassifyDir(event, 'classified')">
+                      unclassify
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <div class="stats-title">unclassified:</div>
+            <span data-text="unclassified" id="unclassifiedTotal"
+              >loading...</span
+            >
+          </div>
         </div>
       </div>
     </section>
@@ -308,8 +360,8 @@
           statsList.hidden = false
           let classNames = Array.from(
             new Set([
-              ...json.stats.dataset.map(item => item.className),
-              ...json.stats.classified.map(item => item.className),
+              ...json.stats.dataset.map(item => item.dirname),
+              ...json.stats.classified.map(item => item.dirname),
             ]),
           )
           renderTemplate(correctList, {
@@ -397,17 +449,21 @@
         }
       }
 
-      async function unclassifyDataset(event) {
+      async function unclassifyDir(event, dir) {
         let tr = event.currentTarget.closest('tr')
-        let className = tr.cells[1].textContent
+        let dirname = tr.cells[1].textContent
         let json = await post(
-          '/unclassifyDataset?' + new URLSearchParams({ className }),
+          '/unclassify?' +
+            new URLSearchParams({
+              dir: dir + '/' + dirname,
+            }),
         )
         if (json.error) {
           alert(json.error)
           return
         }
         tr.cells[0].textContent = 0
+        unclassifiedTotal.textContent = json.total
       }
 
       function loadUnclassified() {

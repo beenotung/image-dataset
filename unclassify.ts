@@ -6,6 +6,7 @@ let unclassifiedDir = 'unclassified'
 let classifiedDir = 'classified'
 
 export function unclassifyDir(dir: string) {
+  console.log('unclassifyDir:', [dir])
   let filenames = getDirFilenamesSync(dir)
   for (let filename of filenames) {
     let srcFile = join(dir, filename)

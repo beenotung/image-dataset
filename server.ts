@@ -29,6 +29,10 @@ app.use(
   '/data-template',
   express.static(resolveFile('node_modules/data-template')),
 )
+app.use(
+  '/heatmap-helpers/bundle.js',
+  express.static(resolveFile('node_modules/heatmap-helpers/bundle.js')),
+)
 app.use('/ionicons', express.static(resolveFile('node_modules/ionicons')))
 app.use('/classified', express.static('classified'))
 app.use('/unclassified', express.static('unclassified'))

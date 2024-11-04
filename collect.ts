@@ -23,8 +23,13 @@ export async function closeBrowser() {
   await browser?.close()
 }
 
-export async function collectByKeyword(keyword: string) {
-  cli.update(`searching "${keyword}"...`)
+export async function collectByKeyword(
+  keyword: string,
+  options: { cli_prefix?: string } = {},
+) {
+  let cli_prefix = options.cli_prefix || ''
+
+  cli.update(`${cli_prefix}searching "${keyword}"...`)
 
   let dir = join(config.rootDir, keyword)
   await mkdir(dir, { recursive: true })
@@ -140,14 +145,14 @@ export async function collectByKeyword(keyword: string) {
         break
       }
     }
-    cli.update(`searching "${keyword}": ${count} images ...`)
+    cli.update(`${cli_prefix}searching "${keyword}": ${count} images ...`)
     for (let image of images.slice(lastCount)) {
       await saveImage(image)
     }
     await scrollToBottom()
     lastCount = count
   }
-  cli.update(`searched "${keyword}": ${lastCount} images.`)
+  cli.update(`${cli_prefix}searched "${keyword}": ${lastCount} images.`)
   cli.nextLine()
 }
 

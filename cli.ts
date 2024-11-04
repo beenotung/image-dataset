@@ -175,12 +175,15 @@ export async function cli() {
   }
 
   let mod = await import('./collect')
-  for (let keyword of args.keywords) {
+  let n = args.keywords.length
+  for (let i = 0; i < n; i++) {
+    let cli_prefix = `[${i + 1}/${n}] `
+    let keyword = args.keywords[i]
     if (find(proxy.keyword, { keyword })?.complete_time) {
-      console.log(`skip "${keyword}"`)
+      console.log(`${cli_prefix}skip "${keyword}"`)
       continue
     }
-    await mod.collectByKeyword(keyword)
+    await mod.collectByKeyword(keyword, { cli_prefix })
     find(proxy.keyword, { keyword })!.complete_time = Date.now()
   }
 

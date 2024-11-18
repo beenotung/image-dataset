@@ -81,6 +81,13 @@
         --top: #47c465;
         --bottom: #00deff;
       }
+      .heatmap-container.overlap {
+        position: relative;
+      }
+      .heatmap-container.overlap .heatmap-canvas {
+        position: absolute;
+        inset: 0;
+      }
       .class-list {
         display: flex;
         flex-direction: column;
@@ -109,6 +116,9 @@
       }
       button key {
         text-decoration: underline;
+      }
+      .text-center {
+        text-align: center;
       }
     </style>
     <script
@@ -239,12 +249,35 @@
               <button onclick="toggleAllImage(event)">select all</button>
             </summary>
             <div class="img-list">
-              <div data-value="images">
+              <div data-value="images" class="image-item">
                 <img
                   data-src="src"
                   loading="lazy"
                   onclick="toggleImage(event)"
                 />
+                <div class="text-center">
+                  <div>
+                    <button onclick="showHeatmap(event)">heatmap</button>
+                    <button
+                      hidden
+                      class="overlap-button"
+                      onclick="overlapHeatmap(event)"
+                    >
+                      overlap
+                    </button>
+                    <button
+                      hidden
+                      class="separate-button"
+                      onclick="separateHeatmap(event)"
+                    >
+                      separate
+                    </button>
+                  </div>
+                  <div class="heatmap-container" hidden>
+                    <canvas class="image-canvas"></canvas>
+                    <canvas class="heatmap-canvas"></canvas>
+                  </div>
+                </div>
                 <div class="class-list">
                   <div data-value="results" class="class-item">
                     <div data-text="label"></div>
@@ -563,6 +596,60 @@
           behavior: 'smooth',
           block: 'end',
         })
+      }
+
+      function showHeatmap(event) {
+        let item = event.currentTarget.closest('.image-item')
+        let heatmap_container = item.querySelector('.heatmap-container')
+        let img = item.querySelector('img')
+        let image_canvas = item.querySelector('.image-canvas')
+        let heatmap_canvas = item.querySelector('.heatmap-canvas')
+        let overlap_button = item.querySelector('.overlap-button')
+        let separate_button = item.querySelector('.separate-button')
+
+        overlap_button.hidden = false
+        heatmap_container.hidden = false
+
+        let rect = img.getBoundingClientRect()
+        image_canvas.width = rect.width
+        image_canvas.height = rect.height
+        heatmap_canvas.width = rect.width
+        heatmap_canvas.height = rect.height
+
+        let context = image_canvas.getContext('2d')
+        context.drawImage(img, 0, 0, rect.width, rect.height)
+
+        heatmap_helpers.build_heatmap({
+          image_canvas,
+          heatmap_canvas,
+          slide_ratio: 0.5,
+          calc_score: context => {
+            return Math.random()
+          },
+          should_zoom: score => score > 0.5,
+        })
+        let heatmap = heatmapHelpers.getHeatmap(img)
+        console.log(heatmap)
+      }
+
+      function overlapHeatmap(event) {
+        let item = event.currentTarget.closest('.image-item')
+        let overlap_button = item.querySelector('.overlap-button')
+        let separate_button = item.querySelector('.separate-button')
+        let heatmap_container = item.querySelector('.heatmap-container')
+        overlap_button.hidden = true
+        separate_button.hidden = false
+        heatmap_container.classList.add('overlap')
+      }
+
+      function separateHeatmap(event) {
+        let item = event.currentTarget.closest('.image-item')
+        let overlap_button = item.querySelector('.overlap-button')
+        let separate_button = item.querySelector('.separate-button')
+        let heatmap_container = item.querySelector('.heatmap-container')
+        overlap_button.hidden = false
+        separate_button.hidden = true
+        heatmap_container.classList.remove('overlap')
       }
     </script>
   </body>

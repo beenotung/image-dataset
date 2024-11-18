@@ -328,6 +328,7 @@
       <div id="correctResult"></div>
     </div>
     <script src="/data-template/base.js"></script>
+    <script src="/bundle.js"></script>
     <script>
       async function get(url, doneFn) {
         let res = await fetch(url)
@@ -598,7 +599,7 @@
         })
       }
 
-      function showHeatmap(event) {
+      async function showHeatmap(event) {
         let item = event.currentTarget.closest('.image-item')
         let heatmap_container = item.querySelector('.heatmap-container')
         let img = item.querySelector('img')
@@ -610,26 +611,67 @@
         overlap_button.hidden = false
         heatmap_container.hidden = false
 
-        let rect = img.getBoundingClientRect()
-        image_canvas.width = rect.width
-        image_canvas.height = rect.height
-        heatmap_canvas.width = rect.width
-        heatmap_canvas.height = rect.height
+        let classNames = Array.from(
+          correctList.querySelectorAll('[data-value]'),
+          button => button.value,
+        )
 
-        let context = image_canvas.getContext('2d')
-        context.drawImage(img, 0, 0, rect.width, rect.height)
+        let models = await loadModels({ classNames })
 
-        heatmap_helpers.build_heatmap({
+        let { width, height } = models.baseModel.spec
+
+        image_canvas.width = width
+        image_canvas.height = height
+        heatmap_canvas.width = width
+        heatmap_canvas.height = height
+
+        // let context = image_canvas.getContext('2d')
+        // context.drawImage(img, 0, 0, width, height)
+
+        let image_tensor = await tf.browser.fromPixels(img)
+        let cropped_image_tensor = cropAndResizeImageTensor({
+          imageTensor: image_tensor,
+          width,
+          height,
+        })
+        tf.browser.toPixels(toTensor3D(cropped_image_tensor), image_canvas)
+
+        let results = await models.classifyImage(img)
+        results.sort((a, b) => b.confidence - a.confidence)
+        console.log(results)
+        let label = results[0].label
+        let base_confidence = results[0].confidence
+        console.log({ label, base_confidence })
+
+        await heatmap_helpers.build_heatmap({
           image_canvas,
           heatmap_canvas,
           slide_ratio: 0.5,
-          calc_score: context => {
-            return Math.random()
+          calc_score: async context => {
+            let { image_data } = context
+            let result = await models.classifyImage(image_data)
+            let confidence = result.find(item => item.label == label).confidence
+            let diff = confidence - base_confidence
+            if (diff == 0) {
+              return 0.5
+            }
+            console.log({
+              confidence,
+              base_confidence,
+              diff,
+            })
+            if (confidence < base_confidence) {
+              let diff = base_confidence - confidence
+              return diff / base_confidence / 2 + 0.5
+            } else {
+              let diff = confidence - base_confidence
+              return (1 - diff / (1 - base_confidence)) / 2
+            }
           },
-          should_zoom: score => score > 0.5,
+          should_zoom: score => {
+            return score <= 0.2 || score >= 0.8
+          },
         })
-        let heatmap = heatmapHelpers.getHeatmap(img)
-        console.log(heatmap)
       }
 
       function overlapHeatmap(event) {

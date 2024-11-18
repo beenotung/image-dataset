@@ -36,6 +36,7 @@ app.use(
 app.use('/ionicons', express.static(resolveFile('node_modules/ionicons')))
 app.use('/classified', express.static('classified'))
 app.use('/unclassified', express.static('unclassified'))
+app.use('/saved_models', express.static('saved_models'))
 app.use(express.static(resolveFile('public')))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))

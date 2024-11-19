@@ -120,7 +120,7 @@ async function countDir2Files(dir: string) {
 app.get('/stats', async (req, res) => {
   res.json({
     stats: {
-      classNames: getClassNames(),
+      classNames: getClassNames({ fallback: [] }),
       dataset: await countDir2Files(config.datasetRootDir),
       classified: await countDir2Files(config.classifiedRootDir),
       downloaded: await countDir2Files(config.downloadedRootDir),

@@ -9,7 +9,7 @@ import {
 } from 'tensorflow-helpers'
 import { config } from './config'
 
-export function getClassNames(): string[] {
+export function getClassNames(options?: { fallback?: string[] }): string[] {
   let modelFile = join(config.classifierModelDir, 'model.json')
   if (existsSync(modelFile)) {
     let json: ModelArtifactsWithClassNames = JSON.parse(
@@ -34,12 +34,12 @@ export function getClassNames(): string[] {
   checkDir(config.classifiedRootDir)
 
   if (classNames.size == 0) {
-    console.error(
-      `Error: no class names found in ${config.datasetRootDir} nor ${config.classifiedRootDir}`,
+    if (options?.fallback) {
+      return options.fallback
+    }
+    throw new Error(
+      'no class names found in dataset nor classified directory. Example: others, cat, dog, both',
     )
-    console.error('Example: others, cat, dog, both')
-    // process.exit(1)
-    throw new Error('no class names found in dataset or classified directory')
   }
 
   return Array.from(classNames)

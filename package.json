@@ -70,6 +70,7 @@
     "ionicons": "^7.4.0",
     "knex": "^3.1.0",
     "listening-on": "^2.0.9",
+    "npm-init-helper": "^1.6.3",
     "playwright": "^1.49.0",
     "populate-env": "^2.3.1",
     "tensorflow-helpers": "^1.2.3"

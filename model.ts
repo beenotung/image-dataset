@@ -8,6 +8,7 @@ import {
   loadImageModel,
 } from 'tensorflow-helpers'
 import { config } from './config'
+import { ask } from 'npm-init-helper'
 
 export function getClassNames(options?: { fallback?: string[] }): string[] {
   let modelFile = join(config.classifierModelDir, 'model.json')
@@ -148,5 +149,28 @@ export async function loadModels() {
     embeddingCache,
     baseModel,
     classifierModel,
+  }
+}
+
+export async function initClassNames() {
+  let classNames = getClassNames({ fallback: [] })
+  if (classNames.length > 1) {
+    console.log('loaded class names:', classNames)
+    return
+  }
+
+  console.log()
+  console.log('no class names found in dataset or classified directory.')
+  console.log('example: others, cat, dog, both')
+  while (classNames.length <= 1) {
+    let input = await ask('input class names: ')
+    classNames = input.split(',').map(name => name.trim())
+    if (classNames.length > 1) {
+      for (let className of classNames) {
+        mkdirSync(join(config.datasetRootDir, className), { recursive: true })
+      }
+      return
+    }
+    console.log('warning: at least two class names are needed')
   }
 }

@@ -1,13 +1,9 @@
-import { existsSync, mkdirSync, readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { extract_lines } from '@beenotung/tslib/string'
-import { proxy } from './proxy'
-import { find } from 'better-sqlite3-proxy'
 import { resolveFile } from './file'
 import { config } from './config'
 import { env } from './env'
-import { getClassNames } from './model'
-import { ask } from 'npm-init-helper'
-import { join } from 'path'
+import { setupDB } from './setup'
 
 type Mode = null | 'download' | 'analysis' | 'rename' | 'webUI'
 
@@ -79,6 +75,7 @@ Notes:
       }
       case '-s':
       case '--searchTerm': {
+        mode = 'download'
         keywords.push(next)
         i++
         break
@@ -132,6 +129,11 @@ Notes:
       }
     }
   }
+  if (!mode) {
+    console.error('Error: run mode not specified')
+    console.error('Run "npx image-dataset --help" to see help message')
+    process.exit(1)
+  }
   if (mode == 'download' && keywords.length == 0) {
     showVersion(console.error)
     console.error('Error: missing keywords')
@@ -156,31 +158,10 @@ function readListFile(file: string) {
   return lines
 }
 
-async function initClassNames() {
-  let classNames = getClassNames({ fallback: [] })
-  if (classNames.length > 1) {
-    console.log('loaded class names:', classNames)
-    return
-  }
-
-  console.log()
-  console.log('no class names found in dataset or classified directory.')
-  console.log('example: others, cat, dog, both')
-  while (classNames.length <= 1) {
-    let input = await ask('input class names: ')
-    classNames = input.split(',').map(name => name.trim())
-    if (classNames.length > 1) {
-      for (let className of classNames) {
-        mkdirSync(join(config.datasetRootDir, className), { recursive: true })
-      }
-      return
-    }
-    console.log('warning: at least two class names are needed')
-  }
-}
-
 export async function cli() {
   let args = parseArguments()
+
+  await setupDB()
 
   if (args.mode == 'analysis') {
     let mod = await import('./analysis')
@@ -195,24 +176,21 @@ export async function cli() {
   }
 
   if (args.mode == 'webUI') {
-    await initClassNames()
-    let mod = await import('./server')
-    mod.startServer(env.PORT)
+    let model = await import('./model')
+    await model.initClassNames()
+    let server = await import('./server')
+    server.startServer(env.PORT)
     return
   }
 
-  let mod = await import('./collect')
-  let n = args.keywords.length
-  for (let i = 0; i < n; i++) {
-    let cli_prefix = `[${i + 1}/${n}] `
-    let keyword = args.keywords[i]
-    if (find(proxy.keyword, { keyword })?.complete_time) {
-      console.log(`${cli_prefix}skip "${keyword}"`)
-      continue
-    }
-    await mod.collectByKeyword(keyword, { cli_prefix })
-    find(proxy.keyword, { keyword })!.complete_time = Date.now()
+  if (args.mode == 'download') {
+    let mod = await import('./collect')
+    mod.main(args.keywords)
+    return
   }
 
-  await mod.closeBrowser()
+  let mode: never = args.mode
+  console.error('Error: unknown mode: ' + JSON.stringify(mode))
+  console.error('Run "npx image-dataset --help" to see help message')
+  process.exit(1)
 }

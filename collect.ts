@@ -163,3 +163,18 @@ async function getFileSize(file: string) {
     return 0
   }
 }
+
+export async function main(keywords: string[]) {
+  let n = keywords.length
+  for (let i = 0; i < n; i++) {
+    let cli_prefix = `[${i + 1}/${n}] `
+    let keyword = keywords[i]
+    if (find(proxy.keyword, { keyword })?.complete_time) {
+      console.log(`${cli_prefix}skip "${keyword}"`)
+      continue
+    }
+    await collectByKeyword(keyword, { cli_prefix })
+    find(proxy.keyword, { keyword })!.complete_time = Date.now()
+  }
+  await closeBrowser()
+}

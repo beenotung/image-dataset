@@ -1,7 +1,4 @@
-import { setupDB } from './setup'
-
 async function main() {
-  await setupDB()
   await require('./cli').cli()
 }
 

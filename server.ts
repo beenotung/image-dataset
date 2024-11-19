@@ -21,6 +21,7 @@ import { compare } from '@beenotung/tslib/compare'
 
 let app = express()
 
+mkdirSync('downloaded', { recursive: true })
 mkdirSync('dataset', { recursive: true })
 mkdirSync('classified', { recursive: true })
 mkdirSync('unclassified', { recursive: true })

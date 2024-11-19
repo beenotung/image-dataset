@@ -54,8 +54,8 @@ function scanImageDir(dir: string) {
 
 export function analysis() {
   let rows: { keyword: string }[] = select_counts.all()
-  if (rows.length == 0 && existsSync(config.rootDir)) {
-    let keywords = getDirFilenamesSync(config.rootDir)
+  if (rows.length == 0 && existsSync(config.downloadedRootDir)) {
+    let keywords = getDirFilenamesSync(config.downloadedRootDir)
     rows = keywords.map(keyword => ({ keyword }))
   }
   if (rows.length == 0) {
@@ -63,7 +63,7 @@ export function analysis() {
     process.exit(1)
   }
   for (let row of rows) {
-    let dir = join(config.rootDir, row.keyword)
+    let dir = join(config.downloadedRootDir, row.keyword)
     if (!existsSync(dir)) {
       continue
     }

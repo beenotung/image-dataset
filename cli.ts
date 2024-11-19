@@ -88,7 +88,7 @@ Notes:
           process.exit(1)
         }
         mode = 'download'
-        config.rootDir = next
+        config.downloadedRootDir = next
         i++
         break
       }

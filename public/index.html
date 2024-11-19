@@ -393,14 +393,8 @@
         get('/stats', json => {
           renderData(statsList, json.stats)
           statsList.hidden = false
-          let classNames = Array.from(
-            new Set([
-              ...json.stats.dataset.map(item => item.dirname),
-              ...json.stats.classified.map(item => item.dirname),
-            ]),
-          )
           renderTemplate(correctList, {
-            buttons: classNames.map((className, index) => {
+            buttons: json.stats.classNames.map((className, index) => {
               return {
                 text: `[${index + 1}] ${className}`,
                 className,

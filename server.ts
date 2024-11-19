@@ -18,6 +18,8 @@ import { startTimer } from '@beenotung/tslib/timer'
 import { SECOND } from '@beenotung/tslib/time'
 import { later } from '@beenotung/tslib/async/wait'
 import { compare } from '@beenotung/tslib/compare'
+import { config } from './config'
+import { getClassNames } from './model'
 
 let app = express()
 
@@ -118,10 +120,11 @@ async function countDir2Files(dir: string) {
 app.get('/stats', async (req, res) => {
   res.json({
     stats: {
-      dataset: await countDir2Files('dataset'),
-      classified: await countDir2Files('classified'),
-      downloaded: await countDir2Files('downloaded'),
-      unclassified: await countDirFiles('unclassified'),
+      classNames: getClassNames(),
+      dataset: await countDir2Files(config.datasetRootDir),
+      classified: await countDir2Files(config.classifiedRootDir),
+      downloaded: await countDir2Files(config.downloadedRootDir),
+      unclassified: await countDirFiles(config.unclassifiedRootDir),
     },
   })
 })

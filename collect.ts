@@ -31,7 +31,7 @@ export async function collectByKeyword(
 
   cli.update(`${cli_prefix}searching "${keyword}"...`)
 
-  let dir = join(config.rootDir, keyword)
+  let dir = join(config.downloadedRootDir, keyword)
   await mkdir(dir, { recursive: true })
 
   let keyword_id = seedRow(proxy.keyword, { keyword })

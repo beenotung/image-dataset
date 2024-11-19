@@ -35,8 +35,8 @@
     "dist"
   ],
   "scripts": {
-    "start": "ts-node main.ts --listFile list.txt",
-    "serve": "ts-node-dev server.ts",
+    "collect": "ts-node main.ts --listFile list.txt",
+    "start": "ts-node-dev server.ts",
     "dev": "npm run bundle -- --watch",
     "test": "tsc --noEmit",
     "clean": "rimraf dist",

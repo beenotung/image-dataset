@@ -273,7 +273,7 @@
                       separate
                     </button>
                   </div>
-                  <div class="heatmap-container" hidden>
+                  <div class="heatmap-container overlap" hidden>
                     <canvas class="image-canvas"></canvas>
                     <canvas class="heatmap-canvas"></canvas>
                   </div>
@@ -608,7 +608,9 @@
         let overlap_button = item.querySelector('.overlap-button')
         let separate_button = item.querySelector('.separate-button')
 
-        overlap_button.hidden = false
+        overlap_button.hidden = true
+        separate_button.hidden = false
+
         heatmap_container.hidden = false
 
         let classNames = Array.from(

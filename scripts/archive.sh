@@ -24,6 +24,7 @@ zip -r "models/$name.zip" \
   unclassified \
   db.sqlite3 \
   list.txt \
+  saved_models/classifier_model \
 
 echo "archived to models/$name.zip"
 
@@ -34,3 +35,4 @@ rm -rf \
   unclassified \
   db.sqlite3 \
   list.txt \
+  saved_models/classifier_model \

@@ -49,6 +49,7 @@ Usage: `npx image-dataset [options]`
 **Rename Mode:**
 
 - `-r, --rename`: Rename image filenames by content hash.
+- `-u, --restore`: Restore unclassified images to downloaded directory.
 
 **Web UI Mode:**
 

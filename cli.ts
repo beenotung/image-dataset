@@ -5,7 +5,7 @@ import { config } from './config'
 import { env } from './env'
 import { setupDB } from './setup'
 
-type Mode = null | 'download' | 'analysis' | 'rename' | 'webUI'
+type Mode = null | 'download' | 'analysis' | 'rename' | 'restore' | 'webUI'
 
 function parseArguments() {
   let keywords: string[] = []
@@ -44,6 +44,7 @@ Analysis Mode:
 
 Rename Mode:
   -r, --rename                Rename image filenames by content hash.
+  -u, --restore               Restore unclassified images to downloaded directory.
 
 Web UI Mode:
   -w, --webUI                 Launch the web-based user interface.
@@ -100,6 +101,11 @@ Notes:
       case '-r':
       case '--rename': {
         mode = 'rename'
+        break
+      }
+      case '-u':
+      case '--restore': {
+        mode = 'restore'
         break
       }
       case '-w':
@@ -172,6 +178,12 @@ export async function cli() {
   if (args.mode == 'rename') {
     let mod = await import('./rename-by-content-hash')
     mod.main()
+    return
+  }
+
+  if (args.mode == 'restore') {
+    let mod = await import('./unclassify')
+    mod.restoreUnclassified()
     return
   }
 

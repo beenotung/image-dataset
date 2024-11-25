@@ -226,6 +226,13 @@
             <span data-text="unclassified" id="unclassifiedTotal"
               >loading...</span
             >
+            <button
+              onclick="restoreUnclassified()"
+              title="move back to downloaded directories"
+            >
+              restore
+            </button>
+            <div id="restoreResult"></div>
           </div>
         </div>
       </div>
@@ -493,6 +500,21 @@
         }
         tr.cells[0].textContent = 0
         unclassifiedTotal.textContent = json.total
+      }
+
+      async function restoreUnclassified() {
+        restoreResult.textContent = 'restoring...'
+        let json = await post('/unclassified/restore')
+        if (json.error) {
+          restoreResult.textContent = json.error
+          return
+        }
+        let message = `${json.restoredCount} restored`
+        if (json.unknownCount > 0) {
+          message += `, ${json.unknownCount} unknown`
+        }
+        restoreResult.textContent = message
+        await loadStats()
       }
 
       function loadUnclassified() {

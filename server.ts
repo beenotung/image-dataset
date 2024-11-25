@@ -3,7 +3,11 @@ import { print } from 'listening-on'
 import { main as train } from './train'
 import { main as retrain } from './retrain'
 import { main as classify, stopClassify } from './classify'
-import { main as unclassifyAll, unclassifyDir } from './unclassify'
+import {
+  restoreUnclassified,
+  main as unclassifyAll,
+  unclassifyDir,
+} from './unclassify'
 import { main as renameByContentHash } from './rename-by-content-hash'
 import { basename, join } from 'path'
 import { rename } from 'fs/promises'
@@ -93,6 +97,15 @@ app.post('/unclassify', async (req, res) => {
     res.json({
       total: await countDirFiles('unclassified'),
     })
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
+
+app.post('/unclassified/restore', (req, res) => {
+  try {
+    let json = restoreUnclassified()
+    res.json(json)
   } catch (error) {
     res.json({ error: String(error) })
   }

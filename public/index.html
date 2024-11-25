@@ -294,7 +294,7 @@
       <div class="section-header">Classified</div>
       <button onclick="loadClassified()">reload</button>
       <div id="classifiedList" data-template="classified" data-bind="classes">
-        loading...
+        (not auto loaded)
       </div>
       <template data-name="classified">
         <div class="classified">
@@ -498,6 +498,10 @@
       function loadUnclassified() {
         unclassifiedList.textContent = 'loading...'
         get('/unclassified', json => {
+          if (json.error) {
+            unclassifiedList.textContent = json.error
+            return
+          }
           renderTemplate(unclassifiedList, {
             classes: json.classes.map(({ className, images }) => ({
               className,
@@ -522,6 +526,14 @@
       function loadClassified() {
         classifiedList.textContent = 'loading...'
         get('/classified', json => {
+          if (json.error) {
+            classifiedList.textContent = json.error
+            return
+          }
+          if (json.classes.length == 0) {
+            classifiedList.textContent = 'no classified images'
+            return
+          }
           renderTemplate(classifiedList, {
             classes: json.classes.map(({ className, filenames }) => {
               return {
@@ -535,7 +547,6 @@
           })
         })
       }
-      loadClassified()
 
       let undoStack = []
       async function undo() {

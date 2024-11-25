@@ -17,6 +17,15 @@ read -p "name: " name
 
 mkdir -p models
 
+if [ -f "models/$name.zip" ]; then
+  read -p "overwrite 'models/$name.zip'? [y/N] " ans
+  if [ "$ans" == 'y' ]; then
+    rm "models/$name.zip"
+  else
+    exit 1
+  fi
+fi
+
 zip -r "models/$name.zip" \
   downloaded \
   dataset \

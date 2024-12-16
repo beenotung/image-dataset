@@ -1,33 +1,78 @@
-import { mkdirSync, readdirSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
+import { getDirFilenamesSync } from '@beenotung/tslib/fs'
 import {
+  ModelArtifactsWithClassNames,
   PreTrainedImageModels,
   loadImageClassifierModel,
   loadImageModel,
 } from 'tensorflow-helpers'
+import { config } from './config'
+import { ask } from 'npm-init-helper'
 
-function createClassNameDirectories(dir: string, classNames: string[]) {
-  for (let className of classNames) {
-    mkdirSync(join(dir, className), { recursive: true })
+export function getClassNames(options?: { fallback?: string[] }): string[] {
+  let modelFile = join(config.classifierModelDir, 'model.json')
+  if (existsSync(modelFile)) {
+    let json: ModelArtifactsWithClassNames = JSON.parse(
+      readFileSync(modelFile, 'utf8'),
+    )
+    if (json.classNames) {
+      return json.classNames
+    }
   }
+
+  let classNames = new Set<string>()
+
+  function checkDir(dir: string) {
+    if (!existsSync(dir)) {
+      return
+    }
+    for (let className of getDirFilenamesSync(dir)) {
+      classNames.add(className)
+    }
+  }
+  checkDir(config.datasetRootDir)
+  checkDir(config.classifiedRootDir)
+
+  if (classNames.size == 0) {
+    if (options?.fallback) {
+      return options.fallback
+    }
+    throw new Error(
+      'no class names found in dataset nor classified directory. Example: others, cat, dog, both',
+    )
+  }
+
+  return Array.from(classNames)
 }
 
-export function getClassNames(): string[] {
-  mkdirSync('dataset', { recursive: true })
-  let classNames: string[] = readdirSync('dataset')
-  if (classNames.length == 0) {
-    console.error('Error: no class names found in dataset directory')
-    console.error('Example: others, cat, dog, both')
-    process.exit(1)
+function createClassNameDirectories(dir: string, classNames: string[]) {
+  let existingClassNames = existsSync(dir) ? getDirFilenamesSync(dir) : []
+
+  for (let className of classNames) {
+    if (existingClassNames.includes(className)) {
+      continue
+    }
+    mkdirSync(join(dir, className), { recursive: true })
   }
-  return classNames
+
+  for (let className of existingClassNames) {
+    if (classNames.includes(className)) {
+      continue
+    }
+    let file = join(dir, className)
+    let stat = statSync(file)
+    if (stat.isDirectory()) {
+      file = JSON.stringify(file)
+      console.warn(
+        `Warning: extra directory ${file} does not exist in classNames`,
+      )
+    }
+  }
 }
 
 export async function loadModels() {
   let classNames = getClassNames()
-
-  createClassNameDirectories('dataset', classNames)
-  createClassNameDirectories('classified', classNames)
 
   let imageModelSpec = PreTrainedImageModels.mobilenet['mobilenet-v3-large-100']
   let { db } = await import('./db')
@@ -83,22 +128,49 @@ export async function loadModels() {
     },
   }
 
+  debugger
   let baseModel = await loadImageModel({
-    dir: './saved_models/base_model',
+    dir: config.baseModelDir,
     spec: imageModelSpec,
     cache: embeddingCache,
   })
   let classifierModel = await loadImageClassifierModel({
-    modelDir: './saved_models/classifier_model',
-    datasetDir: './dataset',
+    modelDir: config.classifierModelDir,
+    datasetDir: config.datasetRootDir,
     baseModel,
     classNames,
     hiddenLayers: [imageModelSpec.features],
   })
 
+  createClassNameDirectories(config.datasetRootDir, classNames)
+  createClassNameDirectories(config.classifiedRootDir, classNames)
+
   return {
     embeddingCache,
     baseModel,
     classifierModel,
+  }
+}
+
+export async function initClassNames() {
+  let classNames = getClassNames({ fallback: [] })
+  if (classNames.length > 1) {
+    console.log('loaded class names:', classNames)
+    return
+  }
+
+  console.log()
+  console.log('no class names found in dataset or classified directory.')
+  console.log('example: others, cat, dog, both')
+  while (classNames.length <= 1) {
+    let input = await ask('input class names: ')
+    classNames = input.split(',').map(name => name.trim())
+    if (classNames.length > 1) {
+      for (let className of classNames) {
+        mkdirSync(join(config.datasetRootDir, className), { recursive: true })
+      }
+      return
+    }
+    console.log('warning: at least two class names are needed')
   }
 }

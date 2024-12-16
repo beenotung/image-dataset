@@ -24,3 +24,4 @@ classified/
 unclassified/
 dataset/
 *.zip
+public/bundle.js

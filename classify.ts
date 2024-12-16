@@ -1,5 +1,6 @@
 import { mkdirSync } from 'fs'
-import { readdir, rename } from 'fs/promises'
+import { rename } from 'fs/promises'
+import { getDirFilenames } from '@beenotung/tslib/fs'
 import { join } from 'path'
 import { topClassifyResult } from 'tensorflow-helpers'
 import { startTimer } from '@beenotung/tslib/timer'
@@ -9,6 +10,12 @@ let unclassifiedDir = 'unclassified'
 let classifiedDir = 'classified'
 
 mkdirSync(unclassifiedDir, { recursive: true })
+
+let running = false
+
+export function stopClassify() {
+  running = false
+}
 
 export async function main() {
   let timer = startTimer('load models')
@@ -20,11 +27,15 @@ export async function main() {
   }
 
   timer.next('load file list')
-  let filenames = await readdir(unclassifiedDir)
+  let filenames = await getDirFilenames(unclassifiedDir)
 
   timer.next('classify images')
   timer.setEstimateProgress(filenames.length)
+  running = true
   for (let filename of filenames) {
+    if (!running) {
+      break
+    }
     let src = join(unclassifiedDir, filename)
     let result = await classifierModel.classifyImageFile(src)
     let className = topClassifyResult(result).label

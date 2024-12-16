@@ -1,12 +1,11 @@
 import { existsSync, readFileSync } from 'fs'
 import { extract_lines } from '@beenotung/tslib/string'
-import { proxy } from './proxy'
-import { find } from 'better-sqlite3-proxy'
 import { resolveFile } from './file'
 import { config } from './config'
 import { env } from './env'
+import { setupDB } from './setup'
 
-type Mode = null | 'download' | 'analysis' | 'rename' | 'webUI'
+type Mode = null | 'download' | 'analysis' | 'rename' | 'restore' | 'webUI'
 
 function parseArguments() {
   let keywords: string[] = []
@@ -45,6 +44,7 @@ Analysis Mode:
 
 Rename Mode:
   -r, --rename                Rename image filenames by content hash.
+  -u, --restore               Restore unclassified images to downloaded directory.
 
 Web UI Mode:
   -w, --webUI                 Launch the web-based user interface.
@@ -76,6 +76,7 @@ Notes:
       }
       case '-s':
       case '--searchTerm': {
+        mode = 'download'
         keywords.push(next)
         i++
         break
@@ -88,7 +89,7 @@ Notes:
           process.exit(1)
         }
         mode = 'download'
-        config.rootDir = next
+        config.downloadedRootDir = next
         i++
         break
       }
@@ -100,6 +101,11 @@ Notes:
       case '-r':
       case '--rename': {
         mode = 'rename'
+        break
+      }
+      case '-u':
+      case '--restore': {
+        mode = 'restore'
         break
       }
       case '-w':
@@ -129,6 +135,11 @@ Notes:
       }
     }
   }
+  if (!mode) {
+    console.error('Error: run mode not specified')
+    console.error('Run "npx image-dataset --help" to see help message')
+    process.exit(1)
+  }
   if (mode == 'download' && keywords.length == 0) {
     showVersion(console.error)
     console.error('Error: missing keywords')
@@ -156,6 +167,8 @@ function readListFile(file: string) {
 export async function cli() {
   let args = parseArguments()
 
+  await setupDB()
+
   if (args.mode == 'analysis') {
     let mod = await import('./analysis')
     mod.analysis()
@@ -168,21 +181,28 @@ export async function cli() {
     return
   }
 
-  if (args.mode == 'webUI') {
-    let mod = await import('./server')
-    mod.startServer(env.PORT)
+  if (args.mode == 'restore') {
+    let mod = await import('./unclassify')
+    mod.restoreUnclassified()
     return
   }
 
-  let mod = await import('./collect')
-  for (let keyword of args.keywords) {
-    if (find(proxy.keyword, { keyword })?.complete_time) {
-      console.log(`skip "${keyword}"`)
-      continue
-    }
-    await mod.collectByKeyword(keyword)
-    find(proxy.keyword, { keyword })!.complete_time = Date.now()
+  if (args.mode == 'webUI') {
+    let model = await import('./model')
+    await model.initClassNames()
+    let server = await import('./server')
+    server.startServer(env.PORT)
+    return
   }
 
-  await mod.closeBrowser()
+  if (args.mode == 'download') {
+    let mod = await import('./collect')
+    mod.main(args.keywords)
+    return
+  }
+
+  let mode: never = args.mode
+  console.error('Error: unknown mode: ' + JSON.stringify(mode))
+  console.error('Run "npx image-dataset --help" to see help message')
+  process.exit(1)
 }

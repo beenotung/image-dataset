@@ -23,10 +23,15 @@ export async function closeBrowser() {
   await browser?.close()
 }
 
-export async function collectByKeyword(keyword: string) {
-  cli.update(`searching "${keyword}"...`)
+export async function collectByKeyword(
+  keyword: string,
+  options: { cli_prefix?: string } = {},
+) {
+  let cli_prefix = options.cli_prefix || ''
 
-  let dir = join(config.rootDir, keyword)
+  cli.update(`${cli_prefix}searching "${keyword}"...`)
+
+  let dir = join(config.downloadedRootDir, keyword)
   await mkdir(dir, { recursive: true })
 
   let keyword_id = seedRow(proxy.keyword, { keyword })
@@ -127,20 +132,27 @@ export async function collectByKeyword(keyword: string) {
   }
 
   let lastCount = 0
+  let attempt = 0
   for (;;) {
     let images = await collectImages()
     let count = images.length
-    if (count > 0 && count == lastCount) {
-      break
+    if (count != lastCount) {
+      attempt = 0
     }
-    cli.update(`searching "${keyword}": ${count} images ...`)
+    if (count > 0 && count == lastCount) {
+      attempt++
+      if (attempt > 3) {
+        break
+      }
+    }
+    cli.update(`${cli_prefix}searching "${keyword}": ${count} images ...`)
     for (let image of images.slice(lastCount)) {
       await saveImage(image)
     }
     await scrollToBottom()
     lastCount = count
   }
-  cli.update(`searched "${keyword}": ${lastCount} images.`)
+  cli.update(`${cli_prefix}searched "${keyword}": ${lastCount} images.`)
   cli.nextLine()
 }
 
@@ -150,4 +162,19 @@ async function getFileSize(file: string) {
   } catch (error) {
     return 0
   }
+}
+
+export async function main(keywords: string[]) {
+  let n = keywords.length
+  for (let i = 0; i < n; i++) {
+    let cli_prefix = `[${i + 1}/${n}] `
+    let keyword = keywords[i]
+    if (find(proxy.keyword, { keyword })?.complete_time) {
+      console.log(`${cli_prefix}skip "${keyword}"`)
+      continue
+    }
+    await collectByKeyword(keyword, { cli_prefix })
+    find(proxy.keyword, { keyword })!.complete_time = Date.now()
+  }
+  await closeBrowser()
 }

@@ -24,12 +24,30 @@
       }
       #statsList {
         display: flex;
+        flex-direction: row;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+      }
+      #statsList > div {
+        display: flex;
         flex-direction: column;
         gap: 0.5rem;
         padding: 0.5rem 0;
       }
+      .stats-title {
+        font-weight: bold;
+        display: inline-block;
+        background-color: #faebd780;
+        padding: 0.25rem 0.5rem;
+      }
       #statsList table {
-        margin-inline-start: 1rem;
+        margin-block-start: 0.25rem;
+        border-collapse: collapse;
+      }
+      #statsList table th,
+      #statsList table td {
+        border: 1px solid black;
+        padding: 0.25rem 0.5rem;
       }
       #classifiedList [data-text='className'],
       #unclassifiedList [data-text='className'] {
@@ -63,6 +81,13 @@
         --top: #47c465;
         --bottom: #00deff;
       }
+      .heatmap-container.overlap {
+        position: relative;
+      }
+      .heatmap-container.overlap .heatmap-canvas {
+        position: absolute;
+        inset: 0;
+      }
       .class-list {
         display: flex;
         flex-direction: column;
@@ -92,12 +117,16 @@
       button key {
         text-decoration: underline;
       }
+      .text-center {
+        text-align: center;
+      }
     </style>
     <script
       type="module"
       src="/ionicons/dist/ionicons/ionicons.esm.js"
     ></script>
     <script nomodule src="/ionicons/dist/ionicons/ionicons.js"></script>
+    <script src="/heatmap-helpers/bundle.js"></script>
   </head>
   <body>
     <div class="fabs bottom right">
@@ -130,37 +159,81 @@
       <button onclick="loadStats()">reload</button>
       <div id="statsList" hidden>
         <div>
-          dataset:
-          <table>
-            <thead>
-              <th>count</th>
-              <th>label</th>
-            </thead>
-            <tbody>
-              <tr data-value="dataset">
-                <td data-text="count"></td>
-                <td data-text="className"></td>
-              </tr>
-            </tbody>
-          </table>
+          <div>
+            <div class="stats-title">downloaded:</div>
+            <table>
+              <thead>
+                <th>count</th>
+                <th>search term</th>
+              </thead>
+              <tbody>
+                <tr data-value="downloaded">
+                  <td data-text="count"></td>
+                  <td data-text="dirname"></td>
+                  <td>
+                    <button onclick="unclassifyDir(event, 'downloaded')">
+                      unclassify
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
         <div>
-          classified:
-          <table>
-            <thead>
-              <th>count</th>
-              <th>label</th>
-            </thead>
-            <tbody>
-              <tr data-value="classified">
-                <td data-text="count"></td>
-                <td data-text="className"></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div>
-          unclassified: <span data-text="unclassified">loading...</span>
+          <div>
+            <div class="stats-title">dataset:</div>
+            <table>
+              <thead>
+                <th>count</th>
+                <th>label</th>
+              </thead>
+              <tbody>
+                <tr data-value="dataset">
+                  <td data-text="count"></td>
+                  <td data-text="dirname"></td>
+                  <td>
+                    <button onclick="unclassifyDir(event, 'dataset')">
+                      unclassify
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <div class="stats-title">classified:</div>
+            <table>
+              <thead>
+                <th>count</th>
+                <th>label</th>
+              </thead>
+              <tbody>
+                <tr data-value="classified">
+                  <td data-text="count"></td>
+                  <td data-text="dirname"></td>
+                  <td>
+                    <button onclick="unclassifyDir(event, 'classified')">
+                      unclassify
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <div class="stats-title">unclassified:</div>
+            <span data-text="unclassified" id="unclassifiedTotal"
+              >loading...</span
+            >
+            <button
+              onclick="restoreUnclassified()"
+              title="move back to downloaded directories"
+            >
+              restore
+            </button>
+            <div id="restoreResult"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -178,14 +251,40 @@
         <div class="unclassified">
           <div data-text="className"></div>
           <details>
-            <summary><span data-text="count"></span> images</summary>
+            <summary>
+              <span data-text="count"></span> images
+              <button onclick="toggleAllImage(event)">select all</button>
+            </summary>
             <div class="img-list">
-              <div data-value="images">
+              <div data-value="images" class="image-item">
                 <img
                   data-src="src"
                   loading="lazy"
                   onclick="toggleImage(event)"
                 />
+                <div class="text-center">
+                  <div>
+                    <button onclick="showHeatmap(event)">heatmap</button>
+                    <button
+                      hidden
+                      class="overlap-button"
+                      onclick="overlapHeatmap(event)"
+                    >
+                      overlap
+                    </button>
+                    <button
+                      hidden
+                      class="separate-button"
+                      onclick="separateHeatmap(event)"
+                    >
+                      separate
+                    </button>
+                  </div>
+                  <div class="heatmap-container overlap" hidden>
+                    <canvas class="image-canvas"></canvas>
+                    <canvas class="heatmap-canvas"></canvas>
+                  </div>
+                </div>
                 <div class="class-list">
                   <div data-value="results" class="class-item">
                     <div data-text="label"></div>
@@ -202,13 +301,16 @@
       <div class="section-header">Classified</div>
       <button onclick="loadClassified()">reload</button>
       <div id="classifiedList" data-template="classified" data-bind="classes">
-        loading...
+        (not auto loaded)
       </div>
       <template data-name="classified">
         <div class="classified">
           <div data-text="className"></div>
           <details>
-            <summary><span data-text="count"></span> images</summary>
+            <summary>
+              <span data-text="count"></span> images
+              <button onclick="toggleAllImage(event)">select all</button>
+            </summary>
             <div class="img-list">
               <div data-value="images">
                 <img
@@ -233,6 +335,7 @@
       <div id="correctResult"></div>
     </div>
     <script src="/data-template/base.js"></script>
+    <script src="/bundle.js"></script>
     <script>
       async function get(url, doneFn) {
         let res = await fetch(url)
@@ -297,14 +400,8 @@
         get('/stats', json => {
           renderData(statsList, json.stats)
           statsList.hidden = false
-          let classNames = Array.from(
-            new Set([
-              ...json.stats.dataset.map(item => item.className),
-              ...json.stats.classified.map(item => item.className),
-            ]),
-          )
           renderTemplate(correctList, {
-            buttons: classNames.map((className, index) => {
+            buttons: json.stats.classNames.map((className, index) => {
               return {
                 text: `[${index + 1}] ${className}`,
                 className,
@@ -368,9 +465,65 @@
         }
       }
 
+      function toggleAllImage(event) {
+        let button = event.currentTarget
+        let imgList = button.closest('details').querySelector('.img-list')
+        if (button.textContent == 'select all') {
+          imgList.querySelectorAll('img').forEach(img => {
+            if (!img.classList.contains('selected')) {
+              img.classList.add('selected')
+              correctCount.textContent++
+            }
+          })
+          button.textContent = 'unselect all'
+        } else {
+          imgList.querySelectorAll('img.selected').forEach(img => {
+            img.classList.remove('selected')
+            correctCount.textContent--
+          })
+          button.textContent = 'select all'
+        }
+      }
+
+      async function unclassifyDir(event, dir) {
+        let tr = event.currentTarget.closest('tr')
+        let dirname = tr.cells[1].textContent
+        let json = await post(
+          '/unclassify?' +
+            new URLSearchParams({
+              dir: dir + '/' + dirname,
+            }),
+        )
+        if (json.error) {
+          alert(json.error)
+          return
+        }
+        tr.cells[0].textContent = 0
+        unclassifiedTotal.textContent = json.total
+      }
+
+      async function restoreUnclassified() {
+        restoreResult.textContent = 'restoring...'
+        let json = await post('/unclassified/restore')
+        if (json.error) {
+          restoreResult.textContent = json.error
+          return
+        }
+        let message = `${json.restoredCount} restored`
+        if (json.unknownCount > 0) {
+          message += `, ${json.unknownCount} unknown`
+        }
+        restoreResult.textContent = message
+        await loadStats()
+      }
+
       function loadUnclassified() {
         unclassifiedList.textContent = 'loading...'
         get('/unclassified', json => {
+          if (json.error) {
+            unclassifiedList.textContent = json.error
+            return
+          }
           renderTemplate(unclassifiedList, {
             classes: json.classes.map(({ className, images }) => ({
               className,
@@ -395,6 +548,14 @@
       function loadClassified() {
         classifiedList.textContent = 'loading...'
         get('/classified', json => {
+          if (json.error) {
+            classifiedList.textContent = json.error
+            return
+          }
+          if (json.classes.length == 0) {
+            classifiedList.textContent = 'no classified images'
+            return
+          }
           renderTemplate(classifiedList, {
             classes: json.classes.map(({ className, filenames }) => {
               return {
@@ -408,7 +569,6 @@
           })
         })
       }
-      loadClassified()
 
       let undoStack = []
       async function undo() {
@@ -464,6 +624,103 @@
           behavior: 'smooth',
           block: 'end',
         })
+      }
+
+      async function showHeatmap(event) {
+        let item = event.currentTarget.closest('.image-item')
+        let heatmap_container = item.querySelector('.heatmap-container')
+        let img = item.querySelector('img')
+        let image_canvas = item.querySelector('.image-canvas')
+        let heatmap_canvas = item.querySelector('.heatmap-canvas')
+        let overlap_button = item.querySelector('.overlap-button')
+        let separate_button = item.querySelector('.separate-button')
+
+        overlap_button.hidden = true
+        separate_button.hidden = false
+
+        heatmap_container.hidden = false
+
+        let classNames = Array.from(
+          correctList.querySelectorAll('[data-value]'),
+          button => button.value,
+        )
+
+        let models = await loadModels({ classNames })
+
+        let { width, height } = models.baseModel.spec
+
+        image_canvas.width = width
+        image_canvas.height = height
+        heatmap_canvas.width = width
+        heatmap_canvas.height = height
+
+        // let context = image_canvas.getContext('2d')
+        // context.drawImage(img, 0, 0, width, height)
+
+        let image_tensor = await tf.browser.fromPixels(img)
+        let cropped_image_tensor = cropAndResizeImageTensor({
+          imageTensor: image_tensor,
+          width,
+          height,
+        })
+        tf.browser.toPixels(toTensor3D(cropped_image_tensor), image_canvas)
+
+        let results = await models.classifyImage(img)
+        results.sort((a, b) => b.confidence - a.confidence)
+        console.log(results)
+        let label = results[0].label
+        let base_confidence = results[0].confidence
+        console.log({ label, base_confidence })
+
+        await heatmap_helpers.build_heatmap({
+          image_canvas,
+          heatmap_canvas,
+          slide_ratio: 0.5,
+          calc_score: async context => {
+            let { image_data } = context
+            let result = await models.classifyImage(image_data)
+            let confidence = result.find(item => item.label == label).confidence
+            let diff = confidence - base_confidence
+            if (diff == 0) {
+              return 0.5
+            }
+            console.log({
+              confidence,
+              base_confidence,
+              diff,
+            })
+            if (confidence < base_confidence) {
+              let diff = base_confidence - confidence
+              return diff / base_confidence / 2 + 0.5
+            } else {
+              let diff = confidence - base_confidence
+              return (1 - diff / (1 - base_confidence)) / 2
+            }
+          },
+          should_zoom: score => {
+            return score <= 0.2 || score >= 0.8
+          },
+        })
+      }
+
+      function overlapHeatmap(event) {
+        let item = event.currentTarget.closest('.image-item')
+        let overlap_button = item.querySelector('.overlap-button')
+        let separate_button = item.querySelector('.separate-button')
+        let heatmap_container = item.querySelector('.heatmap-container')
+        overlap_button.hidden = true
+        separate_button.hidden = false
+        heatmap_container.classList.add('overlap')
+      }
+
+      function separateHeatmap(event) {
+        let item = event.currentTarget.closest('.image-item')
+        let overlap_button = item.querySelector('.overlap-button')
+        let separate_button = item.querySelector('.separate-button')
+        let heatmap_container = item.querySelector('.heatmap-container')
+        overlap_button.hidden = false
+        separate_button.hidden = true
+        heatmap_container.classList.remove('overlap')
       }
     </script>
   </body>

@@ -2,11 +2,16 @@ import express from 'express'
 import { print } from 'listening-on'
 import { main as train } from './train'
 import { main as retrain } from './retrain'
-import { main as classify } from './classify'
-import { main as unclassify } from './unclassify'
+import { main as classify, stopClassify } from './classify'
+import {
+  restoreUnclassified,
+  main as unclassifyAll,
+  unclassifyDir,
+} from './unclassify'
 import { main as renameByContentHash } from './rename-by-content-hash'
 import { basename, join } from 'path'
-import { readdir, rename } from 'fs/promises'
+import { rename } from 'fs/promises'
+import { getDirFilenames } from '@beenotung/tslib/fs'
 import { datasetCache, modelsCache } from './cache'
 import { ClassificationResult, topClassifyResult } from 'tensorflow-helpers'
 import { groupBy } from '@beenotung/tslib/functional'
@@ -16,9 +21,13 @@ import { mkdirSync } from 'fs'
 import { startTimer } from '@beenotung/tslib/timer'
 import { SECOND } from '@beenotung/tslib/time'
 import { later } from '@beenotung/tslib/async/wait'
+import { compare } from '@beenotung/tslib/compare'
+import { config } from './config'
+import { getClassNames } from './model'
 
 let app = express()
 
+mkdirSync('downloaded', { recursive: true })
 mkdirSync('dataset', { recursive: true })
 mkdirSync('classified', { recursive: true })
 mkdirSync('unclassified', { recursive: true })
@@ -27,9 +36,14 @@ app.use(
   '/data-template',
   express.static(resolveFile('node_modules/data-template')),
 )
+app.use(
+  '/heatmap-helpers/bundle.js',
+  express.static(resolveFile('node_modules/heatmap-helpers/bundle.js')),
+)
 app.use('/ionicons', express.static(resolveFile('node_modules/ionicons')))
 app.use('/classified', express.static('classified'))
 app.use('/unclassified', express.static('unclassified'))
+app.use('/saved_models', express.static('saved_models'))
 app.use(express.static(resolveFile('public')))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
@@ -44,14 +58,18 @@ let actions = {
     unclassifiedImageCache.clear()
     return modelsCache.load()
   },
-  loadDataset: datasetCache.load,
+  loadDataset() {
+    stopClassify()
+    return datasetCache.load()
+  },
   train() {
+    stopClassify()
     unclassifiedImageCache.clear()
     return train()
   },
   retrain,
   classify,
-  unclassify,
+  unclassifyAll,
 }
 
 app.get('/actions', (req, res) => {
@@ -69,21 +87,45 @@ for (let [name, fn] of Object.entries(actions)) {
   })
 }
 
+app.post('/unclassify', async (req, res) => {
+  try {
+    let dir = req.query.dir
+    if (!dir || typeof dir != 'string') {
+      throw new Error('dir must be given in req.query')
+    }
+    unclassifyDir(dir)
+    res.json({
+      total: await countDirFiles('unclassified'),
+    })
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
+
+app.post('/unclassified/restore', (req, res) => {
+  try {
+    let json = restoreUnclassified()
+    res.json(json)
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
+
 /*********/
 /* stats */
 /*********/
 
 async function countDirFiles(dir: string) {
-  let filenames = await readdir(dir)
+  let filenames = await getDirFilenames(dir)
   return filenames.length
 }
 
 async function countDir2Files(dir: string) {
-  let classNames = await readdir(dir)
+  let dirnames = await getDirFilenames(dir)
   return Promise.all(
-    classNames.map(async className => ({
-      className,
-      count: await countDirFiles(join(dir, className)),
+    dirnames.map(async dirname => ({
+      dirname,
+      count: await countDirFiles(join(dir, dirname)),
     })),
   )
 }
@@ -91,9 +133,11 @@ async function countDir2Files(dir: string) {
 app.get('/stats', async (req, res) => {
   res.json({
     stats: {
-      dataset: await countDir2Files('dataset'),
-      classified: await countDir2Files('classified'),
-      unclassified: await countDirFiles('unclassified'),
+      classNames: getClassNames({ fallback: [] }),
+      dataset: await countDir2Files(config.datasetRootDir),
+      classified: await countDir2Files(config.classifiedRootDir),
+      downloaded: await countDir2Files(config.downloadedRootDir),
+      unclassified: await countDirFiles(config.unclassifiedRootDir),
     },
   })
 })
@@ -103,12 +147,12 @@ app.get('/stats', async (req, res) => {
 /************/
 
 async function scanDir2Files(dir: string) {
-  let classNames = await readdir(dir)
+  let classNames = await getDirFilenames(dir)
   return Promise.all(
     classNames.map(async className => {
       return {
         className,
-        filenames: await readdir(join(dir, className)),
+        filenames: await getDirFilenames(join(dir, className)),
       }
     }),
   )
@@ -131,7 +175,10 @@ app.get('/unclassified', async (req, res) => {
 
     let images: UnclassifiedImage[] = []
 
-    let filenames = await readdir('unclassified')
+    let filenames = await getDirFilenames('unclassified')
+    filenames = filenames.filter(
+      name => !name.endsWith('.txt') && !name.endsWith('.log'),
+    )
     let newFilenames: string[] = []
 
     let deadlineTimeout = 3 * SECOND
@@ -192,7 +239,7 @@ app.get('/unclassified', async (req, res) => {
             className,
             images,
           }),
-        ),
+        ).sort((a, b) => compare(a.className, b.className)),
       })
     }
   } catch (error) {

@@ -1,9 +1,6 @@
-import { readdir } from 'fs/promises'
+import { getDirFilenames } from '@beenotung/tslib/fs'
 import { basename, join } from 'path'
-import {
-  isContentHash,
-  renameFileByContentHash,
-} from 'tensorflow-helpers/dist/file'
+import { isContentHash, renameFileByContentHash } from 'tensorflow-helpers'
 import { db } from './db'
 import { startTimer } from '@beenotung/tslib/timer'
 
@@ -16,7 +13,7 @@ export async function main() {
 }
 
 async function scanDir2(dir: string) {
-  let classNames = await readdir(dir)
+  let classNames = await getDirFilenames(dir)
   for (let className of classNames) {
     await scanDir(join(dir, className))
   }
@@ -32,7 +29,7 @@ where filename = :old_filename
 `)
 
 async function scanDir(dir: string) {
-  let filenames = await readdir(dir)
+  let filenames = await getDirFilenames(dir)
   filenames = filenames.filter(filename => !isContentHash(filename))
   if (filenames.length == 0) {
     return

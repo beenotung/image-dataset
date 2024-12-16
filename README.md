@@ -7,8 +7,9 @@ Tool to build image dataset: collect, classify, review
 ## Key Steps
 
 - [x] Collect images from Google Search
+- [x] Augment images to increase robustness (using [augment-image](https://github.com/beenotung/augment-image) cli)
 - [x] Classify images with transfer learning
-- [x] Review the classify result to ensure data quality
+- [x] Review the classify result to ensure data quality and evaluate model accuracy
 
 ## Features
 
@@ -48,6 +49,7 @@ Usage: `npx image-dataset [options]`
 **Rename Mode:**
 
 - `-r, --rename`: Rename image filenames by content hash.
+- `-u, --restore`: Restore unclassified images to downloaded directory.
 
 **Web UI Mode:**
 

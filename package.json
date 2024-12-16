@@ -39,7 +39,7 @@
     "serve": "ts-node-dev server.ts",
     "test": "tsc --noEmit",
     "clean": "rimraf dist",
-    "build": "rimraf dist && tsc -p . && rimraf dist/tsconfig.tsbuildinfo dist/migrations/*.d.ts",
+    "build": "rimraf dist && tsc -p . && rimraf --glob dist/tsconfig.tsbuildinfo dist/migrations/*.d.ts",
     "tsc": "tsc -p .",
     "db:ui": "erd-ui erd.txt",
     "db:setup": "npm run db:migrate",

@@ -55,6 +55,10 @@ Usage: `npx image-dataset [options]`
 
 - `-w, --webUI`: Launch the web-based user interface.
 - `-p, --port <number>`: Set the port for the web UI. Default is 8100.
+- `-d, --difficulty <number>`: Set the difficulty for image classifier model. Over-complex setting may result in over-fitting.
+  - 1 for low complexity (default)
+  - 2-3 for moderate complexity
+  - 4-5 for high complexity
 
 **Notes:**
 

@@ -6,9 +6,11 @@ import {
   PreTrainedImageModels,
   loadImageClassifierModel,
   loadImageModel,
+  calcHiddenLayerSize,
 } from 'tensorflow-helpers'
 import { config } from './config'
 import { ask } from 'npm-init-helper'
+import { env } from './env'
 
 export function getClassNames(options?: { fallback?: string[] }): string[] {
   let modelFile = join(config.classifierModelDir, 'model.json')
@@ -138,7 +140,13 @@ export async function loadModels() {
     datasetDir: config.datasetRootDir,
     baseModel,
     classNames,
-    hiddenLayers: [imageModelSpec.features],
+    hiddenLayers: [
+      calcHiddenLayerSize({
+        inputSize: imageModelSpec.features,
+        outputSize: classNames.length,
+        difficulty: env.CLASSIFICATION_DIFFICULTY,
+      }),
+    ],
   })
 
   createClassNameDirectories(config.datasetRootDir, classNames)

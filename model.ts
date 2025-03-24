@@ -128,7 +128,6 @@ export async function loadModels() {
     },
   }
 
-  debugger
   let baseModel = await loadImageModel({
     dir: config.baseModelDir,
     spec: imageModelSpec,

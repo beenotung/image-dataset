@@ -40,7 +40,7 @@
     "dev": "npm run bundle -- --watch",
     "test": "tsc --noEmit",
     "clean": "rimraf dist",
-    "build": "rimraf dist && tsc -p . && rimraf dist/tsconfig.tsbuildinfo dist/migrations/*.d.ts",
+    "build": "rimraf dist && tsc -p . && rimraf --glob dist/tsconfig.tsbuildinfo dist/migrations/*.d.ts",
     "bundle": "esbuild --bundle client.ts --outfile=public/bundle.js",
     "tsc": "tsc -p .",
     "db:ui": "erd-ui erd.txt",
@@ -52,7 +52,7 @@
     "db:gen-proxy": "erd-to-proxy < erd.txt > proxy.ts"
   },
   "dependencies": {
-    "@beenotung/tslib": "^24.1.0",
+    "@beenotung/tslib": "^24.2.1",
     "@tensorflow/tfjs-node": "^4.22.0",
     "better-sqlite3": "^11.5.0",
     "better-sqlite3-proxy": "^2.10.0",

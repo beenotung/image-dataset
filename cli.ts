@@ -216,7 +216,7 @@ export async function cli() {
 
   if (args.mode == 'download') {
     let mod = await import('./collect')
-    mod.main(args.keywords)
+    await mod.main(args.keywords)
     return
   }
 

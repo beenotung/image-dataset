@@ -42,7 +42,10 @@ export async function collectByKeyword(
     waitUntil: 'domcontentloaded',
   })
   await page.fill('form textarea[name="q"]', keyword)
-  await page.click('form button[type="submit"]')
+  await page.evaluate(() => {
+    let form = document.querySelector('form[role="search"]') as HTMLFormElement
+    form.submit()
+  })
   await page.waitForURL(/^https:\/\/www\.google\.com\/search/, {
     waitUntil: 'domcontentloaded',
   })

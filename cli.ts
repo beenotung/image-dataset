@@ -49,7 +49,7 @@ Rename Mode:
 Web UI Mode:
   -w, --webUI                 Launch the web-based user interface.
   -p, --port <number>         Set the port for the web UI. Default is 8100.
-  -d, --difficulty <number>   Set the difficulty for image classifier model. Over-complex setting may result in over-fitting.
+  -c, --complexity <number>   Set the complexity for image classifier model. Over-complex setting may result in over-fitting.
                               1 for low complexity (default),
                               2-3 for moderate complexity,
                               4-5 for high complexity.
@@ -137,17 +137,18 @@ Notes:
         }
         break
       }
-      case '-d':
-      case '--difficulty': {
+      case '-c':
+      case '--complexity': {
         if (!next) {
           showVersion(console.error)
-          console.error('Error: missing difficulty number after --difficulty')
+          console.error('Error: missing complexity number after --complexity')
           process.exit(1)
         }
         env.CLASSIFICATION_DIFFICULTY = +next
+        console.log({ next, mode })
         if (!(env.CLASSIFICATION_DIFFICULTY > 0)) {
           showVersion(console.error)
-          console.error('Error: invalid difficulty number after --difficulty')
+          console.error('Error: invalid complexity number after --complexity')
           process.exit(1)
         }
         break

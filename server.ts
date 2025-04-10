@@ -23,7 +23,7 @@ import { SECOND } from '@beenotung/tslib/time'
 import { later } from '@beenotung/tslib/async/wait'
 import { compare } from '@beenotung/tslib/compare'
 import { config } from './config'
-import { getClassNames } from './model'
+import { getClassNames, resetClassNames } from './model'
 
 let app = express()
 
@@ -54,6 +54,12 @@ app.use(express.urlencoded({ extended: false }))
 
 let actions = {
   renameByContentHash,
+  async resetClassNames() {
+    stopClassify()
+    await resetClassNames()
+    unclassifiedImageCache.clear()
+    return modelsCache.load()
+  },
   loadModel() {
     unclassifiedImageCache.clear()
     return modelsCache.load()

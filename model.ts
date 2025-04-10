@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, statSync } from 'fs'
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmdirSync,
+  statSync,
+} from 'fs'
 import { join } from 'path'
 import { getDirFilenamesSync } from '@beenotung/tslib/fs'
 import {
@@ -169,15 +176,62 @@ export async function initClassNames() {
   console.log()
   console.log('no class names found in dataset or classified directory.')
   console.log('example: others, cat, dog, both')
-  while (classNames.length <= 1) {
+  classNames = await askClassNames()
+  for (let className of classNames) {
+    mkdirSync(join(config.datasetRootDir, className), { recursive: true })
+  }
+}
+
+async function askClassNames() {
+  while (true) {
     let input = await ask('input class names: ')
-    classNames = input.split(',').map(name => name.trim())
+    let classNames = input.split(',').map(name => name.trim())
     if (classNames.length > 1) {
-      for (let className of classNames) {
-        mkdirSync(join(config.datasetRootDir, className), { recursive: true })
-      }
-      return
+      return classNames
     }
     console.log('warning: at least two class names are needed')
+  }
+}
+
+export async function resetClassNames() {
+  let existingClassNames = getClassNames({ fallback: [] })
+  let newClassNames = await askClassNames()
+  let classesToRemove = existingClassNames.filter(
+    className => !newClassNames.includes(className),
+  )
+
+  // check if there are same samples in removed classes
+  let hasFiles = false
+  let rootDirs = [config.datasetRootDir, config.classifiedRootDir]
+  for (let rootDir of rootDirs) {
+    for (let className of classesToRemove) {
+      let dir = join(rootDir, className)
+      let files = readdirSync(dir).length
+      if (files > 0) {
+        console.log(`warning: ${dir} is not empty`)
+        hasFiles = true
+      }
+    }
+  }
+  if (hasFiles) {
+    return
+  }
+
+  // remove directories for removed class names
+  for (let rootDir of rootDirs) {
+    for (let className of classesToRemove) {
+      let dir = join(rootDir, className)
+      if (existsSync(dir)) {
+        rmdirSync(dir)
+      }
+    }
+  }
+
+  // remove classifier model
+  rmdirSync(config.classifierModelDir, { recursive: true })
+
+  // create directories for new class names
+  for (let className of newClassNames) {
+    mkdirSync(join(config.classifiedRootDir, className), { recursive: true })
   }
 }

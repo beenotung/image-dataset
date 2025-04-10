@@ -81,6 +81,11 @@ Notes:
       case '-s':
       case '--searchTerm': {
         mode = 'download'
+        if (!next) {
+          showVersion(console.error)
+          console.error('Error: missing search term after --searchTerm')
+          process.exit(1)
+        }
         keywords.push(next)
         i++
         break
@@ -215,6 +220,12 @@ export async function cli() {
   }
 
   if (args.mode == 'download') {
+    if (args.keywords.length == 0) {
+      showVersion(console.error)
+      console.error('Error: missing keywords')
+      console.error('Either specify with --searchTerm or --listFile')
+      process.exit(1)
+    }
     let mod = await import('./collect')
     await mod.main(args.keywords)
     return

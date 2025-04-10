@@ -135,6 +135,7 @@ Notes:
           console.error('Error: invalid port number after --port')
           process.exit(1)
         }
+        i++
         break
       }
       case '-c':
@@ -151,6 +152,7 @@ Notes:
           console.error('Error: invalid complexity number after --complexity')
           process.exit(1)
         }
+        i++
         break
       }
       default: {

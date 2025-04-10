@@ -220,12 +220,6 @@ export async function cli() {
   }
 
   if (args.mode == 'download') {
-    if (args.keywords.length == 0) {
-      showVersion(console.error)
-      console.error('Error: missing keywords')
-      console.error('Either specify with --searchTerm or --listFile')
-      process.exit(1)
-    }
     let mod = await import('./collect')
     await mod.main(args.keywords)
     return

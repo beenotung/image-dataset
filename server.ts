@@ -23,7 +23,7 @@ import { SECOND } from '@beenotung/tslib/time'
 import { later } from '@beenotung/tslib/async/wait'
 import { compare } from '@beenotung/tslib/compare'
 import { config } from './config'
-import { getClassNames, resetClassNames } from './model'
+import { getClassNames, updateClassLabels, getClassLabelsInfo } from './model'
 
 let app = express()
 
@@ -54,9 +54,13 @@ app.use(express.urlencoded({ extended: false }))
 
 let actions = {
   renameByContentHash,
-  async resetClassNames() {
+  async updateModelSettings(body: {
+    complexity: number
+    classNames: string[]
+  }) {
     stopClassify()
-    await resetClassNames()
+    env.CLASSIFICATION_DIFFICULTY = body.complexity
+    await updateClassLabels(body)
     unclassifiedImageCache.clear()
     return modelsCache.load()
   },
@@ -85,7 +89,7 @@ app.get('/actions', (req, res) => {
 for (let [name, fn] of Object.entries(actions)) {
   app.post('/' + name, async (req, res) => {
     try {
-      await fn()
+      await fn(req.body)
       res.json({})
     } catch (error) {
       res.json({ error: String(error) })
@@ -112,6 +116,37 @@ app.post('/unclassified/restore', (req, res) => {
   try {
     let json = restoreUnclassified()
     res.json(json)
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
+
+/******************/
+/* model settings */
+/******************/
+
+app.get('/getClassLabelsInfo', async (req, res) => {
+  try {
+    stopClassify()
+    let info = await getClassLabelsInfo()
+    unclassifiedImageCache.clear()
+    res.json(info)
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
+
+app.post('/updateModelSettings', async (req, res) => {
+  try {
+    let { complexity, classNames } = req.body
+    if (!(complexity >= 1 && complexity <= 5)) {
+      throw new Error('Complexity must be between 1 and 5')
+    }
+    if (!Array.isArray(classNames) || classNames.length < 2) {
+      throw new Error('At least two class names are required')
+    }
+    await actions.updateModelSettings({ complexity, classNames })
+    res.json({})
   } catch (error) {
     res.json({ error: String(error) })
   }

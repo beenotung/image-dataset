@@ -193,11 +193,17 @@ async function askClassNames(question: string) {
   }
 }
 
-export async function resetClassNames() {
+export async function getClassLabelsInfo() {
+  let classNames = getClassNames({ fallback: [] })
+  return {
+    classNames,
+    complexity: env.CLASSIFICATION_DIFFICULTY,
+  }
+}
+
+export async function updateClassLabels(body: { classNames: string[] }) {
   let existingClassNames = getClassNames({ fallback: [] })
-  console.log('model complexity:', env.CLASSIFICATION_DIFFICULTY)
-  console.log('existing class names:', existingClassNames.join(', '))
-  let newClassNames = await askClassNames('input new class names: ')
+  let newClassNames = body.classNames
   let classesToRemove = existingClassNames.filter(
     className => !newClassNames.includes(className),
   )
@@ -216,7 +222,9 @@ export async function resetClassNames() {
     }
   }
   if (hasFiles) {
-    return
+    throw new Error(
+      'Cannot update labels: Some classes to be removed still contain images',
+    )
   }
 
   // remove directories for removed class names

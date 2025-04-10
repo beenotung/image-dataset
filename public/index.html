@@ -120,6 +120,30 @@
       .text-center {
         text-align: center;
       }
+      .text-muted {
+        color: #666;
+        font-size: 0.9em;
+      }
+      #modelSettingsDialog table {
+        margin: 0.5rem 0;
+      }
+      #modelSettingsDialog th {
+        text-align: right;
+        padding-right: 1rem;
+        vertical-align: top;
+        padding-top: 0.5rem;
+        white-space: nowrap;
+      }
+      #modelSettingsDialog td {
+        min-width: 200px;
+        padding-top: 0.5rem;
+      }
+      #modelSettingsDialog input {
+        margin-bottom: 0.25rem;
+      }
+      #modelSettingsDialog .text-muted {
+        line-height: 1.4;
+      }
     </style>
     <script
       type="module"
@@ -153,6 +177,54 @@
         loading...
       </div>
       <div id="actionResult"></div>
+    </section>
+    <section id="modelSettingsDialog" hidden>
+      <div class="section-header">Model Settings</div>
+      <table>
+        <tr>
+          <th>Model Complexity:</th>
+          <td>
+            <input
+              type="number"
+              id="newComplexity"
+              min="1"
+              max="5"
+              style="width: 4em"
+            />
+            <div class="text-muted">
+              1 for easy tasks (default)<br />
+              2-3 for medium difficulty tasks<br />
+              4-5 for complex tasks<br />
+              Higher values give larger hidden layer size but may result in
+              over-fitting
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <th>Current Labels:</th>
+          <td id="currentLabels"></td>
+        </tr>
+        <tr>
+          <th>
+            <label for="newLabels">New Labels:</label>
+          </th>
+          <td>
+            <input
+              type="text"
+              id="newLabels"
+              placeholder="e.g. others, cat, dog"
+              style="width: 100%"
+              onchange="trimNewLabels()"
+            />
+            <div class="text-muted">comma-separated, at least 2 labels</div>
+          </td>
+        </tr>
+      </table>
+      <div style="margin-top: 0.5rem">
+        <button onclick="applyModelSettings()">Apply</button>
+        <button onclick="hideModelSettingsDialog()">Cancel</button>
+        <span id="modelSettingsResult"></span>
+      </div>
     </section>
     <section>
       <div class="section-header">Stats</div>
@@ -366,6 +438,11 @@
             return {
               text: name,
               async onclick(event) {
+                if (name == 'UpdateModelSettings') {
+                  event.preventDefault()
+                  showModelSettingsDialog()
+                  return
+                }
                 let button = event.currentTarget
                 button.textContent = name + ' (running...)'
                 let res = await fetch('/' + action, { method: 'POST' })
@@ -721,6 +798,70 @@
         overlap_button.hidden = false
         separate_button.hidden = true
         heatmap_container.classList.remove('overlap')
+      }
+
+      function showModelSettingsDialog() {
+        modelSettingsDialog.hidden = false
+        newLabels.value = ''
+        modelSettingsResult.textContent = ''
+        get('/getClassLabelsInfo', json => {
+          if (json.error) {
+            modelSettingsResult.style.color = 'red'
+            modelSettingsResult.textContent = json.error
+            return
+          }
+          newComplexity.value = json.complexity
+          currentLabels.textContent = json.classNames.join(', ')
+        })
+      }
+
+      function trimNewLabels() {
+        let classNames = newLabels.value
+          .split(',')
+          .map(s => s.trim())
+          .filter(s => s)
+        newLabels.value = classNames.join(', ')
+        return classNames
+      }
+
+      async function applyModelSettings() {
+        modelSettingsResult.style.color = 'red'
+
+        let complexity = +newComplexity.value
+        if (!(complexity >= 1 && complexity <= 5)) {
+          modelSettingsResult.textContent = 'Complexity must be between 1 and 5'
+          return
+        }
+
+        let classNames = trimNewLabels()
+        if (classNames.length < 2) {
+          modelSettingsResult.textContent =
+            'At least two class names are required'
+          return
+        }
+
+        modelSettingsResult.style.color = 'gray'
+        modelSettingsResult.textContent = 'Saving...'
+
+        let json = await post('/updateModelSettings', {
+          complexity,
+          classNames,
+        })
+        if (json.error) {
+          modelSettingsResult.style.color = 'red'
+          modelSettingsResult.textContent = json.error
+          return
+        }
+
+        modelSettingsResult.style.color = 'green'
+        modelSettingsResult.textContent = 'Settings saved successfully!'
+        loadStats()
+
+        setTimeout(hideModelSettingsDialog, 3000)
+      }
+
+      function hideModelSettingsDialog() {
+        modelSettingsDialog.hidden = true
       }
     </script>
   </body>

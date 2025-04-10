@@ -206,7 +206,7 @@ export async function resetClassNames() {
   for (let rootDir of rootDirs) {
     for (let className of classesToRemove) {
       let dir = join(rootDir, className)
-      let files = readdirSync(dir).length
+      let files = existsSync(dir) ? readdirSync(dir).length : 0
       if (files > 0) {
         console.log(`warning: ${dir} is not empty`)
         hasFiles = true

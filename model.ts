@@ -230,7 +230,9 @@ export async function resetClassNames() {
   }
 
   // remove classifier model
-  rmdirSync(config.classifierModelDir, { recursive: true })
+  if (existsSync(config.classifierModelDir)) {
+    rmdirSync(config.classifierModelDir, { recursive: true })
+  }
 
   // create directories for new class names
   for (let className of newClassNames) {

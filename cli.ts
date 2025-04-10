@@ -146,7 +146,6 @@ Notes:
           process.exit(1)
         }
         env.CLASSIFICATION_DIFFICULTY = +next
-        console.log({ next, mode })
         if (!(env.CLASSIFICATION_DIFFICULTY > 0)) {
           showVersion(console.error)
           console.error('Error: invalid complexity number after --complexity')

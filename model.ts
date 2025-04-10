@@ -176,15 +176,15 @@ export async function initClassNames() {
   console.log()
   console.log('no class names found in dataset or classified directory.')
   console.log('example: others, cat, dog, both')
-  classNames = await askClassNames()
+  classNames = await askClassNames('input class names: ')
   for (let className of classNames) {
     mkdirSync(join(config.datasetRootDir, className), { recursive: true })
   }
 }
 
-async function askClassNames() {
+async function askClassNames(question: string) {
   while (true) {
-    let input = await ask('input class names: ')
+    let input = await ask(question)
     let classNames = input.split(',').map(name => name.trim())
     if (classNames.length > 1) {
       return classNames
@@ -195,7 +195,9 @@ async function askClassNames() {
 
 export async function resetClassNames() {
   let existingClassNames = getClassNames({ fallback: [] })
-  let newClassNames = await askClassNames()
+  console.log('model complexity:', env.CLASSIFICATION_DIFFICULTY)
+  console.log('existing class names:', existingClassNames.join(', '))
+  let newClassNames = await askClassNames('input new class names: ')
   let classesToRemove = existingClassNames.filter(
     className => !newClassNames.includes(className),
   )

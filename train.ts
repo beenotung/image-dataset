@@ -9,6 +9,7 @@ export async function main() {
   let batchSize = 32
   let total_epochs = metadata.epochs + epochs
   let total_batches = Math.ceil(x.shape[0] / batchSize)
+  console.log(`\nTraining ${epochs} epochs...`)
   await classifierModel.train({
     x,
     y,

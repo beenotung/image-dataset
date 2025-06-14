@@ -18,6 +18,7 @@ import {
 import { config } from './config'
 import { ask } from 'npm-init-helper'
 import { env } from './env'
+import { writeFile } from 'fs/promises'
 
 export function getClassNames(options?: { fallback?: string[] }): string[] {
   let modelFile = join(config.classifierModelDir, 'model.json')
@@ -155,6 +156,7 @@ export async function loadModels() {
       }),
     ],
   })
+  let metadata = loadClassifierModelMetadata(config.classifierModelDir)
 
   createClassNameDirectories(config.datasetRootDir, classNames)
   createClassNameDirectories(config.classifiedRootDir, classNames)
@@ -163,7 +165,32 @@ export async function loadModels() {
     embeddingCache,
     baseModel,
     classifierModel,
+    metadata,
   }
+}
+
+function loadClassifierModelMetadata(dir: string) {
+  let file = join(dir, 'metadata.json')
+  let epochs = 0
+  try {
+    let text = readFileSync(file, 'utf8')
+    let json = JSON.parse(text)
+    epochs = json.epochs || 0
+  } catch (error) {
+    // missing file or invalid json
+  }
+  return {
+    epochs,
+  }
+}
+
+export async function saveClassifierModelMetadata(
+  dir: string,
+  metadata: { epochs: number },
+) {
+  let file = join(dir, 'metadata.json')
+  let text = JSON.stringify(metadata, null, 2)
+  await writeFile(file, text, 'utf8')
 }
 
 export async function initClassNames() {

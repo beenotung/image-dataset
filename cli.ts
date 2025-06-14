@@ -216,7 +216,6 @@ export async function cli() {
   }
 
   if (args.mode == 'webUI') {
-    installTensorflow()
     let model = await import('./model')
     await model.initClassNames()
     let server = await import('./server')
@@ -239,32 +238,4 @@ export async function cli() {
 
 function installPlaywright() {
   execSync('npx playwright install chromium')
-}
-
-function installTensorflow() {
-  let filename = 'tensorflow.dll'
-  let src = 'node_modules/@tensorflow/tfjs-node/deps/lib/' + filename
-
-  // test direct dependency on @tensorflow/tfjs-node
-  {
-    let dest_dir = 'node_modules/@tensorflow/tfjs-node/lib/napi-v8'
-    let dest_file = join(dest_dir, filename)
-
-    if (existsSync(src) && existsSync(dest_dir) && !existsSync(dest_file)) {
-      copyFileSync(src, dest_file)
-      return
-    }
-  }
-
-  // test indirect dependency on @tensorflow/tfjs-node
-  {
-    let dest_dir =
-      'node_modules/image-dataset/node_modules/@tensorflow/tfjs-node/lib/napi-v8'
-    let dest_file = join(dest_dir, filename)
-
-    if (existsSync(src) && existsSync(dest_dir) && !existsSync(dest_file)) {
-      copyFileSync(src, dest_file)
-      return
-    }
-  }
 }

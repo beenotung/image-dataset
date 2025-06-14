@@ -212,7 +212,8 @@ let unclassifiedImageCache = new Map<string, UnclassifiedImage>()
 app.get('/unclassified', async (req, res) => {
   let hasSentResponse = false
   try {
-    let { baseModel, classifierModel } = await modelsCache.get()
+    let { baseModel, classifierModel, metadata } = await modelsCache.get()
+    let epochs = metadata.epochs
 
     let images: UnclassifiedImage[] = []
 
@@ -228,6 +229,7 @@ app.get('/unclassified', async (req, res) => {
     let timer = startTimer('load unclassified (cached)')
     timer.setEstimateProgress(filenames.length)
     for (let filename of filenames) {
+      if (metadata.epochs != epochs) break
       let image = unclassifiedImageCache.get(filename)
       if (image) {
         images.push(image)
@@ -246,6 +248,7 @@ app.get('/unclassified', async (req, res) => {
     timer.next('load unclassified (uncached)')
     timer.setEstimateProgress(newFilenames.length)
     for (let filename of newFilenames) {
+      if (metadata.epochs != epochs) return
       let file = join('unclassified', filename)
       let results = await classifierModel.classifyImageFile(file)
       let result = topClassifyResult(results)

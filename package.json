@@ -53,6 +53,7 @@
   },
   "dependencies": {
     "@beenotung/tslib": "^24.6.2",
+    "@tensorflow/tfjs-core": "^4.22.0",
     "better-sqlite3": "^11.9.1",
     "better-sqlite3-proxy": "^2.11.0",
     "better-sqlite3-schema": "^3.1.8",

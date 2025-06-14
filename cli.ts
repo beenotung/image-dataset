@@ -1,10 +1,11 @@
-import { existsSync, readFileSync } from 'fs'
+import { copyFileSync, existsSync, readFileSync } from 'fs'
 import { extract_lines } from '@beenotung/tslib/string'
 import { resolveFile } from './file'
 import { config } from './config'
 import { env } from './env'
 import { setupDB } from './setup'
 import { execSync } from 'child_process'
+import { join } from 'path'
 
 type Mode = null | 'download' | 'analysis' | 'rename' | 'restore' | 'webUI'
 
@@ -215,6 +216,7 @@ export async function cli() {
   }
 
   if (args.mode == 'webUI') {
+    installTensorflow()
     let model = await import('./model')
     await model.initClassNames()
     let server = await import('./server')
@@ -223,7 +225,7 @@ export async function cli() {
   }
 
   if (args.mode == 'download') {
-    execSync('npx playwright install chromium')
+    installPlaywright()
     let mod = await import('./collect')
     await mod.main(args.keywords)
     return
@@ -233,4 +235,19 @@ export async function cli() {
   console.error('Error: unknown mode: ' + JSON.stringify(mode))
   console.error('Run "npx image-dataset --help" to see help message')
   process.exit(1)
+}
+
+function installPlaywright() {
+  execSync('npx playwright install chromium')
+}
+
+function installTensorflow() {
+  let filename = 'tensorflow.dll'
+  let src = 'node_modules/@tensorflow/tfjs-node/deps/lib/' + filename
+  let dest_dir = 'node_modules/@tensorflow/tfjs-node/lib/napi-v8'
+  let dest_file = join(dest_dir, filename)
+
+  if (existsSync(src) && existsSync(dest_dir) && !existsSync(dest_file)) {
+    copyFileSync(src, dest_file)
+  }
 }

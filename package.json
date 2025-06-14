@@ -1,6 +1,6 @@
 {
   "name": "image-dataset",
-  "version": "1.9.1",
+  "version": "1.10.0",
   "description": "Tool to build image dataset: collect, classify, review",
   "keywords": [
     "image-dataset",

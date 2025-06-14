@@ -4,6 +4,7 @@ import { resolveFile } from './file'
 import { config } from './config'
 import { env } from './env'
 import { setupDB } from './setup'
+import { execSync } from 'child_process'
 
 type Mode = null | 'download' | 'analysis' | 'rename' | 'restore' | 'webUI'
 
@@ -222,6 +223,7 @@ export async function cli() {
   }
 
   if (args.mode == 'download') {
+    execSync('npx playwright install chromium')
     let mod = await import('./collect')
     await mod.main(args.keywords)
     return

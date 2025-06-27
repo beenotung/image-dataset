@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, readFileSync } from 'fs'
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'fs'
 import { extract_lines } from '@beenotung/tslib/string'
 import { resolveFile } from './file'
 import { config } from './config'
@@ -6,6 +6,7 @@ import { env } from './env'
 import { setupDB } from './setup'
 import { execSync } from 'child_process'
 import { join } from 'path'
+import { dbFile } from './db'
 
 type Mode = null | 'download' | 'analysis' | 'rename' | 'restore' | 'webUI'
 
@@ -216,6 +217,15 @@ export async function cli() {
   }
 
   if (args.mode == 'webUI') {
+    setupGitIgnore([
+      ...gitIgnoreFiles.db,
+      config.downloadedRootDir,
+      config.datasetRootDir,
+      config.classifiedRootDir,
+      config.unclassifiedRootDir,
+      config.baseModelDir,
+      config.classifierModelDir,
+    ])
     let model = await import('./model')
     await model.initClassNames()
     let server = await import('./server')
@@ -224,6 +234,7 @@ export async function cli() {
   }
 
   if (args.mode == 'download') {
+    setupGitIgnore([...gitIgnoreFiles.db, config.downloadedRootDir])
     installPlaywright()
     let mod = await import('./collect')
     await mod.main(args.keywords)
@@ -234,6 +245,38 @@ export async function cli() {
   console.error('Error: unknown mode: ' + JSON.stringify(mode))
   console.error('Run "npx image-dataset --help" to see help message')
   process.exit(1)
+}
+
+let gitIgnoreFiles = {
+  db: [dbFile, dbFile + '-shm', dbFile + '-wal'],
+}
+
+function setupGitIgnore(files: string[]) {
+  let content = ''
+  try {
+    content = readFileSync('.gitignore', 'utf-8')
+  } catch (error) {
+    // e.g. file not found
+  }
+
+  let newContent = '\n' + content.trim().replaceAll('\r\n', '\n') + '\n'
+
+  for (let file of files) {
+    if (file.startsWith('./')) {
+      file = file.slice(2)
+    }
+    if (!newContent.includes('\n' + file + '\n')) {
+      newContent += file + '\n'
+    }
+  }
+
+  newContent = newContent.trim() + '\n'
+
+  if (newContent == content) {
+    return
+  }
+
+  writeFileSync('.gitignore', newContent)
 }
 
 function installPlaywright() {

@@ -9,7 +9,6 @@ import {
   unclassifyDir,
 } from './unclassify'
 import { main as renameByContentHash } from './rename-by-content-hash'
-import { main as trainingDataRatio } from './training-ratio'
 import { basename, join } from 'path'
 import { rename } from 'fs/promises'
 import { getDirFilenames } from '@beenotung/tslib/fs'
@@ -92,7 +91,6 @@ let actions = {
   retrain,
   classify,
   unclassifyAll,
-  trainingDataRatio,
 }
 
 app.get('/actions', (req, res) => {

@@ -525,7 +525,7 @@
                   showModelSettingsDialog()
                   return
                 }
-                if (name == 'TrainingDataRatio') {
+                if (name == 'UpdateDataRatio') {
                   event.preventDefault()
                   showDataRatio()
                   return
@@ -989,6 +989,7 @@
       }
 
       function hideModelSettingsDialog() {
+        modelSettingsResult.textContent=''
         modelSettingsDialog.hidden = true
       }
 
@@ -1019,6 +1020,7 @@
       }
 
       function hideDataRatio() {
+        ratioSettingsResult.textContent = ''
         dataRatio.hidden = true
       }      
     </script>

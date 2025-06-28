@@ -9,6 +9,7 @@ import {
   unclassifyDir,
 } from './unclassify'
 import { main as renameByContentHash } from './rename-by-content-hash'
+import { main as trainingDataRatio } from './training-ratio'
 import { basename, join } from 'path'
 import { rename } from 'fs/promises'
 import { getDirFilenames } from '@beenotung/tslib/fs'
@@ -23,7 +24,7 @@ import { SECOND } from '@beenotung/tslib/time'
 import { later } from '@beenotung/tslib/async/wait'
 import { compare } from '@beenotung/tslib/compare'
 import { config } from './config'
-import { getClassNames, updateClassLabels, getClassLabelsInfo } from './model'
+import { getClassNames, updateClassLabels, getClassLabelsInfo, getDataRatio, updateDataRatio } from './model'
 
 let app = express()
 
@@ -31,6 +32,7 @@ mkdirSync('downloaded', { recursive: true })
 mkdirSync('dataset', { recursive: true })
 mkdirSync('classified', { recursive: true })
 mkdirSync('unclassified', { recursive: true })
+mkdirSync('validation', { recursive: true })
 
 app.use(
   '/data-template',
@@ -43,6 +45,7 @@ app.use(
 app.use('/ionicons', express.static(resolveFile('node_modules/ionicons')))
 app.use('/classified', express.static('classified'))
 app.use('/unclassified', express.static('unclassified'))
+app.use('/validation', express.static('validation'))
 app.use('/saved_models', express.static('saved_models'))
 app.use(express.static(resolveFile('public')))
 app.use(express.json())
@@ -64,6 +67,15 @@ let actions = {
     unclassifiedImageCache.clear()
     return modelsCache.load()
   },
+  async updateDataRatio(body: {
+    ratio: number
+  }) {
+    stopClassify()
+    env.TRAINING_RATIO = body.ratio
+    await updateDataRatio(body)
+    unclassifiedImageCache.clear()
+    return modelsCache.load()
+  },
   loadModel() {
     unclassifiedImageCache.clear()
     return modelsCache.load()
@@ -80,6 +92,7 @@ let actions = {
   retrain,
   classify,
   unclassifyAll,
+  trainingDataRatio,
 }
 
 app.get('/actions', (req, res) => {
@@ -121,9 +134,9 @@ app.post('/unclassified/restore', (req, res) => {
   }
 })
 
-/******************/
-/* model settings */
-/******************/
+/*************************/
+/* model & data settings */
+/*************************/
 
 app.get('/getClassLabelsInfo', async (req, res) => {
   try {
@@ -146,6 +159,30 @@ app.post('/updateModelSettings', async (req, res) => {
       throw new Error('At least two class names are required')
     }
     await actions.updateModelSettings({ complexity, classNames })
+    res.json({})
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
+
+app.get('/getDataRatio', async (req, res) => {
+  try {
+    stopClassify()
+    let info = await getDataRatio()
+    unclassifiedImageCache.clear()
+    res.json(info)
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
+
+app.post('/updateDataRatio', async (req, res) => {
+  try {
+    let { ratio } = req.body
+    if (!(ratio > 0 && ratio < 1)) {
+      throw new Error('Percentage must be between 0 and 100')
+    }
+    await actions.updateDataRatio({ ratio })
     res.json({})
   } catch (error) {
     res.json({ error: String(error) })
@@ -208,6 +245,94 @@ type UnclassifiedImage = {
   results: ClassificationResult[]
 }
 let unclassifiedImageCache = new Map<string, UnclassifiedImage>()
+let validationImageCache = new Map<string, UnclassifiedImage>()
+
+//TODO
+app.get('/validation', async (req, res) => {
+  let hasSentResponse = false
+  try {
+    let { baseModel, classifierModel, metadata } = await modelsCache.get()
+    let epochs = metadata.epochs
+
+    let images: UnclassifiedImage[] = []
+    let filenames = await getDirFilenames('validation')
+    filenames = filenames.filter(
+      name => !name.endsWith('.txt') && !name.endsWith('.log'),
+    )
+    let newFilenames: string[] = []
+
+    let deadlineTimeout = 3 * SECOND
+    let deadline = Date.now() + deadlineTimeout
+
+    let timer = startTimer('load validation (cached)')
+    timer.setEstimateProgress(filenames.length)
+    for (let filename of filenames) {
+      if (metadata.epochs != epochs) break
+      let image = validationImageCache.get(filename)
+      if (image) {
+        images.push(image)
+      } else {
+        newFilenames.push(filename)
+      }
+      timer.tick()
+    }
+
+    if (isClassifying) {
+      sendResponse()
+      return
+    }
+    isClassifying = true
+
+    timer.next('load validation (uncached)')
+    timer.setEstimateProgress(newFilenames.length)
+    for (let filename of newFilenames) {
+      if (metadata.epochs != epochs) return
+      let file = join('validation', filename)
+      let results = await classifierModel.classifyImageFile(file)
+      let result = topClassifyResult(results)
+      let image: UnclassifiedImage = {
+        filename,
+        label: result.label,
+        confidence: result.confidence,
+        results,
+      }
+      unclassifiedImageCache.set(filename, image)
+      images.push(image)
+      if (!hasSentResponse && Date.now() >= deadline) {
+        sendResponse()
+      }
+      timer.tick()
+      await later(0)
+    }
+
+    timer.end()
+
+    sendResponse()
+
+    function sendResponse() {
+      if (hasSentResponse) {
+        return
+      }
+      hasSentResponse = true
+      res.json({
+        classes: Array.from(
+          groupBy(image => image.label, images).entries(),
+          ([className, images]) => ({
+            className,
+            images,
+          }),
+        ).sort((a, b) => compare(a.className, b.className)),
+      })
+    }
+  } catch (error) {
+    console.error(error)
+    if (!hasSentResponse) {
+      res.json({ error: String(error) })
+    }
+  } finally {
+    isClassifying = false
+  }
+})
 
 app.get('/unclassified', async (req, res) => {
   let hasSentResponse = false

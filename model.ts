@@ -7,7 +7,7 @@ import {
   statSync,
 } from 'fs'
 import { join } from 'path'
-import { getDirFilenamesSync } from '@beenotung/tslib/fs'
+import { getDirFilenames, getDirFilenamesSync } from '@beenotung/tslib/fs'
 import {
   ModelArtifactsWithClassNames,
   PreTrainedImageModels,
@@ -18,7 +18,7 @@ import {
 import { config } from './config'
 import { ask } from 'npm-init-helper'
 import { env } from './env'
-import { writeFile } from 'fs/promises'
+import { readdir, stat, writeFile } from 'fs/promises'
 
 export function getClassNames(options?: { fallback?: string[] }): string[] {
   let modelFile = join(config.classifierModelDir, 'model.json')
@@ -220,12 +220,39 @@ async function askClassNames(question: string) {
   }
 }
 
+async function getDirFilenamesRecur(dir: string): Promise<string[]> {
+  let filenames = (await getDirFilenames(dir)).filter(
+    name => !name.endsWith('.txt') && !name.endsWith('.log')
+  );
+  let targets: string[] = [];
+
+  for (const filename of filenames) {
+    let path = join(dir, filename);
+
+    if ((await stat(path)).isDirectory()) {
+      targets = targets.concat(await getDirFilenamesRecur(path));
+    } else {
+      targets.push(path);
+    }
+  }
+  return targets;
+}
+
 export async function getClassLabelsInfo() {
   let classNames = getClassNames({ fallback: [] })
   return {
     classNames,
     complexity: env.CLASSIFICATION_DIFFICULTY,
   }
+}
+
+export async function getDataRatio() {
+  let num_of_training = (await getDirFilenamesRecur(config.datasetRootDir)).length
+  let num_of_validation = (await getDirFilenamesRecur(config.validationRootDir)).length
+
+  //rd off to % with 2 decimal places 
+  let dataRatio = Math.round(num_of_training / (num_of_training + num_of_validation) * 10000) /100
+  return { dataRatio }
 }
 
 export async function updateClassLabels(body: { classNames: string[] }) {
@@ -273,4 +300,14 @@ export async function updateClassLabels(body: { classNames: string[] }) {
   for (let className of newClassNames) {
     mkdirSync(join(config.classifiedRootDir, className), { recursive: true })
   }
+}
+
+export async function updateDataRatio(body: { ratio: number }) {
+  let newRatio = body.ratio
+
+  let num_of_training = (await getDirFilenamesRecur(config.datasetRootDir)).length
+  let num_of_validation = (await getDirFilenamesRecur(config.validationRootDir)).length
+  let total_num = num_of_training + num_of_validation
+  let num_to_move_to_training = Math.round(total_num * newRatio) - num_of_training
+  //TODO function to move files
 }

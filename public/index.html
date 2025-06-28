@@ -226,6 +226,29 @@
         <span id="modelSettingsResult"></span>
       </div>
     </section>
+    <section id="dataRatio" hidden>
+      <div class="section-header">Training Data Ratio</div>
+      <table>
+        <tr>
+          <th>Percentage of training data over whole dataset:</th>
+          <td>
+            <input
+              type="number"
+              id="newRatio"
+              min="0"
+              max="100"
+              style="width: 4em"
+            />
+            %
+          </td>
+        </tr>
+      </table>
+      <div style="margin-top: 0.5rem">
+        <button onclick="applyDataRatio()">Apply</button>
+        <button onclick="hideDataRatio()">Cancel</button>
+        <span id="ratioSettingsResult"></span>
+      </div>
+    </section>
     <section>
       <div class="section-header">Stats</div>
       <button onclick="loadStats()">reload</button>
@@ -308,6 +331,65 @@
           </div>
         </div>
       </div>
+    </section>
+    <!-- wip validation -->
+    <section>
+      <div class="section-header">Validation</div>
+      <button onclick="loadValidation()">reload</button>
+      <div
+        id="validationList"
+        data-template="validation"
+        data-bind="classes"
+      >
+        (not auto loaded)
+      </div>
+      <template data-name="validation">
+        <div class="validation">
+          <div data-text="className"></div>
+          <details>
+            <summary>
+              <span data-text="count"></span> images
+            </summary>
+            <div class="img-list">
+              <div data-value="images" class="image-item">
+                <img
+                  data-src="src"
+                  loading="lazy"
+                />
+                <div class="text-center">
+                  <div>
+                    <button onclick="showHeatmap(event)">heatmap</button>
+                    <button
+                      hidden
+                      class="overlap-button"
+                      onclick="overlapHeatmap(event)"
+                    >
+                      overlap
+                    </button>
+                    <button
+                      hidden
+                      class="separate-button"
+                      onclick="separateHeatmap(event)"
+                    >
+                      separate
+                    </button>
+                  </div>
+                  <div class="heatmap-container overlap" hidden>
+                    <canvas class="image-canvas"></canvas>
+                    <canvas class="heatmap-canvas"></canvas>
+                  </div>
+                </div>
+                <div class="class-list">
+                  <div data-value="results" class="class-item">
+                    <div data-text="label"></div>
+                    <div data-text="confidence"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </template>
     </section>
     <section>
       <div class="section-header">Unclassified</div>
@@ -443,6 +525,11 @@
                   showModelSettingsDialog()
                   return
                 }
+                if (name == 'TrainingDataRatio') {
+                  event.preventDefault()
+                  showDataRatio()
+                  return
+                }
                 let button = event.currentTarget
                 button.textContent = name + ' (running...)'
                 let res = await fetch('/' + action, { method: 'POST' })
@@ -463,6 +550,7 @@
 
       function loadStats() {
         statsList.querySelectorAll('tbody').forEach(tbody => {
+          if (!tbody.rows[0]) return
           for (;;) {
             let row = tbody.rows[1]
             if (row) {
@@ -592,6 +680,34 @@
         }
         restoreResult.textContent = message
         await loadStats()
+      }
+
+      function loadValidation() {
+        validationList.textContent = 'loading...'
+        get('/validation', json => {
+          if (json.error) {
+            validationList.textContent = json.error
+            return
+          }
+          renderTemplate(validationList, {
+            classes: json.classes.map(({ className, images }) => ({
+              className,
+              count: images.length,
+              images: images
+                .sort((a, b) => a.confidence - b.confidence)
+                .map(image => ({
+                  ...image,
+                  src: `/validation/${image.filename}`,
+                  results: image.results
+                    .sort((a, b) => b.confidence - a.confidence)
+                    .map(result => ({
+                      label: result.label,
+                      confidence: (result.confidence * 100).toFixed(2) + '%',
+                    })),
+                })),
+            })),
+          })
+        })
       }
 
       function loadUnclassified() {
@@ -815,6 +931,18 @@
         })
       }
 
+      function showDataRatio() {
+        dataRatio.hidden = false
+        get('/getDataRatio', json => {
+          if (json.error) {
+            ratioSettingsResult.style.color = 'red'
+            ratioSettingsResult.textContent = json.error
+            return
+          }
+          newRatio.value = json.dataRatio
+        })
+      }
+
       function trimNewLabels() {
         let classNames = newLabels.value
           .split(',')
@@ -863,6 +991,36 @@
       function hideModelSettingsDialog() {
         modelSettingsDialog.hidden = true
       }
+
+      async function applyDataRatio() {
+        ratioSettingsResult.style.color = 'red'
+
+        let ratio = (+newRatio.value) / 100
+        if (!(ratio > 0 && ratio < 1)) {
+          ratioSettingsResult.textContent = 'Percentage must be between 0 and 100'
+          return
+        }
+
+        ratioSettingsResult.style.color = 'gray'
+        ratioSettingsResult.textContent = 'Saving...'
+
+        let json = await post('/updateDataRatio', { ratio })
+        if (json.error) {
+          ratioSettingsResult.style.color = 'red'
+          ratioSettingsResult.textContent = json.error
+          return
+        }
+
+        ratioSettingsResult.style.color = 'green'
+        ratioSettingsResult.textContent = 'Ratio saved successfully!'
+        loadStats()
+
+        setTimeout(hideDataRatio, 3000)
+      }
+
+      function hideDataRatio() {
+        dataRatio.hidden = true
+      }      
     </script>
   </body>
 </html>

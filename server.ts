@@ -77,7 +77,11 @@ let actions = {
     unclassifiedImageCache.clear()
     return train()
   },
-  retrain,
+  retrain() {
+    stopClassify()
+    unclassifiedImageCache.clear()
+    return retrain()
+  },
   classify,
   unclassifyAll,
 }

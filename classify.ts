@@ -11,10 +11,10 @@ let classifiedDir = 'classified'
 
 mkdirSync(unclassifiedDir, { recursive: true })
 
-let running = false
+let next_round = 0
 
 export function stopClassify() {
-  running = false
+  next_round++
 }
 
 export async function main() {
@@ -31,9 +31,10 @@ export async function main() {
 
   timer.next('classify images')
   timer.setEstimateProgress(filenames.length)
-  running = true
+  next_round++
+  let running_round = next_round
   for (let filename of filenames) {
-    if (!running) {
+    if (running_round != next_round) {
       break
     }
     let src = join(unclassifiedDir, filename)

@@ -332,25 +332,24 @@
         </div>
       </div>
     </section>
-    <!-- wip validation -->
     <section>
-      <div class="section-header">Validation</div>
-      <button onclick="loadValidation()">reload</button>
+      <div class="section-header">Test data</div>
+      <button onclick="loadtesting()">reload</button>
       <div
-        id="validationList"
-        data-template="validation"
+        id="testingList"
+        data-template="testing"
         data-bind="classes"
       >
         (not auto loaded)
       </div>
-      <template data-name="validation">
-        <div class="validation">
+      <template data-name="testing">
+        <div class="testing">
           <div data-text="className"></div>
           <details>
             <summary>
               <span data-text="count"></span> images
             </summary>
-            <div class="img-list">
+            <div class="img-list" >
               <div data-value="images" class="image-item">
                 <img
                   data-src="src"
@@ -681,24 +680,24 @@
         restoreResult.textContent = message
         await loadStats()
       }
-
-      function loadValidation() {
-        validationList.textContent = 'loading...'
-        get('/validation', json => {
+      
+      function loadtesting() {
+        testingList.textContent = 'loading...'
+        get('/testing', json => {
           if (json.error) {
-            validationList.textContent = json.error
+            testingList.textContent = json.error
             return
           }
-          renderTemplate(validationList, {
+          renderTemplate(testingList, {
             classes: json.classes.map(({ className, images }) => ({
               className,
               count: images.length,
               images: images
-                .sort((a, b) => a.confidence - b.confidence)
+                .sort((a, b) => a.image.confidence - b.image.confidence)
                 .map(image => ({
                   ...image,
-                  src: `/validation/${image.filename}`,
-                  results: image.results
+                  src: `/dataset/test/${className}/${image.image.filename}`,
+                  results: image.image.results
                     .sort((a, b) => b.confidence - a.confidence)
                     .map(result => ({
                       label: result.label,
@@ -706,6 +705,13 @@
                     })),
                 })),
             })),
+          })
+          Array.from(document.getElementById('testingList').getElementsByClassName("image-item")).forEach(item => {
+            if (item.value.actual_label == item.value.results[0].label) {
+              item.style.backgroundColor = 'rgb(202, 255, 211)'
+            } else {
+              item.style.backgroundColor = 'rgb(255, 211, 211)'
+            }
           })
         })
       }

@@ -41,7 +41,7 @@ export function getClassNames(options?: { fallback?: string[] }): string[] {
       classNames.add(className)
     }
   }
-  checkDir(config.datasetRootDir)
+  checkDir(config.trainDatasetRootDir)
   checkDir(config.classifiedRootDir)
 
   if (classNames.size == 0) {
@@ -145,7 +145,7 @@ export async function loadModels() {
   })
   let classifierModel = await loadImageClassifierModel({
     modelDir: config.classifierModelDir,
-    datasetDir: config.datasetRootDir,
+    datasetDir: config.trainDatasetRootDir,
     baseModel,
     classNames,
     hiddenLayers: [
@@ -158,7 +158,7 @@ export async function loadModels() {
   })
   let metadata = loadClassifierModelMetadata(config.classifierModelDir)
 
-  createClassNameDirectories(config.datasetRootDir, classNames)
+  createClassNameDirectories(config.trainDatasetRootDir, classNames)
   createClassNameDirectories(config.classifiedRootDir, classNames)
 
   return {
@@ -205,7 +205,7 @@ export async function initClassNames() {
   console.log('example: others, cat, dog, both')
   classNames = await askClassNames('input class names: ')
   for (let className of classNames) {
-    mkdirSync(join(config.datasetRootDir, className), { recursive: true })
+    mkdirSync(join(config.trainDatasetRootDir, className), { recursive: true })
   }
 }
 
@@ -247,11 +247,11 @@ export async function getClassLabelsInfo() {
 }
 
 export async function getDataRatio() {
-  let num_of_training = (await getDirFilenamesRecur(config.datasetRootDir)).length
-  let num_of_validation = (await getDirFilenamesRecur(config.validationRootDir)).length
+  let num_of_training = (await getDirFilenamesRecur(config.trainDatasetRootDir)).length
+  let num_of_testing = (await getDirFilenamesRecur(config.testDatasetRootDir)).length
 
   //rd off to % with 2 decimal places 
-  let dataRatio = Math.round(num_of_training / (num_of_training + num_of_validation) * 10000) /100
+  let dataRatio = Math.round(num_of_training / (num_of_training + num_of_testing) * 10000) /100
   return { dataRatio }
 }
 
@@ -264,7 +264,7 @@ export async function updateClassLabels(body: { classNames: string[] }) {
 
   // check if there are same samples in removed classes
   let hasFiles = false
-  let rootDirs = [config.datasetRootDir, config.classifiedRootDir]
+  let rootDirs = [config.trainDatasetRootDir, config.classifiedRootDir]
   for (let rootDir of rootDirs) {
     for (let className of classesToRemove) {
       let dir = join(rootDir, className)
@@ -305,9 +305,9 @@ export async function updateClassLabels(body: { classNames: string[] }) {
 export async function updateDataRatio(body: { ratio: number }) {
   let newRatio = body.ratio
 
-  let num_of_training = (await getDirFilenamesRecur(config.datasetRootDir)).length
-  let num_of_validation = (await getDirFilenamesRecur(config.validationRootDir)).length
-  let total_num = num_of_training + num_of_validation
+  let num_of_training = (await getDirFilenamesRecur(config.trainDatasetRootDir)).length
+  let num_of_testing = (await getDirFilenamesRecur(config.testDatasetRootDir)).length
+  let total_num = num_of_training + num_of_testing
   let num_to_move_to_training = Math.round(total_num * newRatio) - num_of_training
   //TODO function to move files
 }

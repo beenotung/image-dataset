@@ -9,7 +9,7 @@ import {
   unclassifyDir,
 } from './unclassify'
 import { main as renameByContentHash } from './rename-by-content-hash'
-import { basename, join } from 'path'
+import { basename, join, parse } from 'path'
 import { rename } from 'fs/promises'
 import { getDirFilenames } from '@beenotung/tslib/fs'
 import { datasetCache, modelsCache } from './cache'
@@ -28,10 +28,11 @@ import { getClassNames, updateClassLabels, getClassLabelsInfo, getDataRatio, upd
 let app = express()
 
 mkdirSync('downloaded', { recursive: true })
-mkdirSync('dataset', { recursive: true })
+mkdirSync('dataset/train', { recursive: true })
+mkdirSync('dataset/test', { recursive: true })
 mkdirSync('classified', { recursive: true })
 mkdirSync('unclassified', { recursive: true })
-mkdirSync('validation', { recursive: true })
+
 
 app.use(
   '/data-template',
@@ -44,7 +45,7 @@ app.use(
 app.use('/ionicons', express.static(resolveFile('node_modules/ionicons')))
 app.use('/classified', express.static('classified'))
 app.use('/unclassified', express.static('unclassified'))
-app.use('/validation', express.static('validation'))
+app.use('/dataset/test', express.static('dataset/test'))
 app.use('/saved_models', express.static('saved_models'))
 app.use(express.static(resolveFile('public')))
 app.use(express.json())
@@ -210,7 +211,7 @@ app.get('/stats', async (req, res) => {
   res.json({
     stats: {
       classNames: getClassNames({ fallback: [] }),
-      dataset: await countDir2Files(config.datasetRootDir),
+      dataset: await countDir2Files(config.trainDatasetRootDir),
       classified: await countDir2Files(config.classifiedRootDir),
       downloaded: await countDir2Files(config.downloadedRootDir),
       unclassified: await countDirFiles(config.unclassifiedRootDir),
@@ -243,36 +244,41 @@ type UnclassifiedImage = {
   results: ClassificationResult[]
 }
 let unclassifiedImageCache = new Map<string, UnclassifiedImage>()
-let validationImageCache = new Map<string, UnclassifiedImage>()
+let testingImageCache = new Map<string, UnclassifiedImage>()
 
 //TODO
-app.get('/validation', async (req, res) => {
+app.get('/testing', async (req, res) => {
   let hasSentResponse = false
   try {
     let { baseModel, classifierModel, metadata } = await modelsCache.get()
     let epochs = metadata.epochs
 
-    let images: UnclassifiedImage[] = []
-    let filenames = await getDirFilenames('validation')
-    filenames = filenames.filter(
-      name => !name.endsWith('.txt') && !name.endsWith('.log'),
-    )
+    let images: {image: UnclassifiedImage, actual_label: string}[] = []
+    let classnames = await getDirFilenames('dataset/test')
+
     let newFilenames: string[] = []
 
     let deadlineTimeout = 3 * SECOND
     let deadline = Date.now() + deadlineTimeout
 
-    let timer = startTimer('load validation (cached)')
-    timer.setEstimateProgress(filenames.length)
-    for (let filename of filenames) {
-      if (metadata.epochs != epochs) break
-      let image = validationImageCache.get(filename)
-      if (image) {
-        images.push(image)
-      } else {
-        newFilenames.push(filename)
+    let timer = startTimer(`load test data(cached)`)
+    for (let className of classnames) {
+      let files = (await getDirFilenames(join('dataset/test', className))).filter(
+        name => !name.endsWith('.txt') && !name.endsWith('.log'),
+    )
+      
+      timer.setEstimateProgress(files.length)
+      for (let filename of files) {
+        if (metadata.epochs != epochs) break
+        let file = join('dataset/test', className, filename)
+        let image = testingImageCache.get(file)
+        if(image){
+          images.push({image, actual_label: className})
+        } else{
+          newFilenames.push(join(className, filename))
+        }
+        timer.tick()
       }
-      timer.tick()
     }
 
     if (isClassifying) {
@@ -280,29 +286,28 @@ app.get('/validation', async (req, res) => {
       return
     }
     isClassifying = true
-
-    timer.next('load validation (uncached)')
+    
+    timer.next('load testing (uncached)')
     timer.setEstimateProgress(newFilenames.length)
     for (let filename of newFilenames) {
       if (metadata.epochs != epochs) return
-      let file = join('validation', filename)
+      let file = join('dataset/test', filename)
       let results = await classifierModel.classifyImageFile(file)
       let result = topClassifyResult(results)
       let image: UnclassifiedImage = {
-        filename,
+        filename: parse(filename).base,
         label: result.label,
         confidence: result.confidence,
         results,
       }
-      unclassifiedImageCache.set(filename, image)
-      images.push(image)
+      unclassifiedImageCache.set(parse(filename).base, image)
+      images.push({image, actual_label: parse(filename).dir})
       if (!hasSentResponse && Date.now() >= deadline) {
         sendResponse()
       }
       timer.tick()
       await later(0)
     }
-
     timer.end()
 
     sendResponse()
@@ -312,9 +317,10 @@ app.get('/validation', async (req, res) => {
         return
       }
       hasSentResponse = true
+
       res.json({
         classes: Array.from(
-          groupBy(image => image.label, images).entries(),
+          groupBy(image => image.actual_label, images).entries(),
           ([className, images]) => ({
             className,
             images,

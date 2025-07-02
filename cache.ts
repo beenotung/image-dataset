@@ -24,3 +24,9 @@ export let datasetCache = makeCache(async () => {
   let models = await modelsCache.get()
   return models.classifierModel.loadDatasetFromDirectory()
 })
+
+export let testDatasetCache = makeCache(async () => {
+  let models = await modelsCache.get()
+  // return models.classifierModel.loadTestDatasetFromDirectory()
+    return models.classifierModel.loadDatasetFromDirectory()
+})

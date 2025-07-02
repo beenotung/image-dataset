@@ -1,7 +1,7 @@
 export let config = {
   downloadedRootDir: './downloaded',
-  datasetRootDir: './dataset',
-  validationRootDir: './validation',
+  trainDatasetRootDir: './dataset/train',
+  testDatasetRootDir: './dataset/test',
   classifiedRootDir: './classified',
   unclassifiedRootDir: './unclassified',
   baseModelDir: './saved_models/base_model',

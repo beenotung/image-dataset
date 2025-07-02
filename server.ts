@@ -246,7 +246,6 @@ type UnclassifiedImage = {
 let unclassifiedImageCache = new Map<string, UnclassifiedImage>()
 let testingImageCache = new Map<string, UnclassifiedImage>()
 
-//TODO
 app.get('/testing', async (req, res) => {
   let hasSentResponse = false
   try {

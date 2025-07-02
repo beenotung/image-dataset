@@ -27,6 +27,7 @@ export let datasetCache = makeCache(async () => {
 
 export let testDatasetCache = makeCache(async () => {
   let models = await modelsCache.get()
+  // TODO change to load fomr test data after tensorflow-helpers update
   // return models.classifierModel.loadTestDatasetFromDirectory()
     return models.classifierModel.loadDatasetFromDirectory()
 })

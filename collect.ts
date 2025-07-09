@@ -1,4 +1,3 @@
-import { chromium } from 'playwright'
 import { ProgressCli } from '@beenotung/tslib/progress-cli'
 import { createHash } from 'crypto'
 import { join } from 'path'
@@ -6,22 +5,9 @@ import { mkdir, stat, writeFile } from 'fs/promises'
 import { find, seedRow } from 'better-sqlite3-proxy'
 import { proxy } from './proxy'
 import { config } from './config'
+import { closeBrowser, getPage } from './browser'
 
 let cli = new ProgressCli()
-
-let getPage = async () => {
-  let browser = await chromium.launch({ headless: false })
-  let page = await browser.newPage()
-  getPage = async () => page
-  return page
-}
-
-export async function closeBrowser() {
-  let page = await getPage()
-  let browser = page.context().browser()
-  await page.close()
-  await browser?.close()
-}
 
 export async function collectByKeyword(
   keyword: string,

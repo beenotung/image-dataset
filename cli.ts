@@ -8,7 +8,14 @@ import { execSync } from 'child_process'
 import { join } from 'path'
 import { dbFile } from './db'
 
-type Mode = null | 'download' | 'analysis' | 'rename' | 'restore' | 'webUI'
+type Mode =
+  | null
+  | 'download'
+  | 'analysis'
+  | 'benchmark'
+  | 'rename'
+  | 'restore'
+  | 'webUI'
 
 function parseArguments() {
   let keywords: string[] = []
@@ -44,6 +51,9 @@ Download Mode:
 
 Analysis Mode:
   -a, --analysis              Run analysis mode instead of download mode.
+
+Benchmark Mode:
+  -b, --benchmark             Measure the time needed to classify images.
 
 Rename Mode:
   -r, --rename                Rename image filenames by content hash.
@@ -108,6 +118,11 @@ Notes:
       case '-a':
       case '--analysis': {
         mode = 'analysis'
+        break
+      }
+      case '-b':
+      case '--benchmark': {
+        mode = 'benchmark'
         break
       }
       case '-r':
@@ -201,6 +216,13 @@ export async function cli() {
   if (args.mode == 'analysis') {
     let mod = await import('./analysis')
     mod.analysis()
+    return
+  }
+
+  if (args.mode == 'benchmark') {
+    installPlaywright()
+    let mod = await import('./benchmark')
+    await mod.benchmark()
     return
   }
 

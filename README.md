@@ -46,6 +46,10 @@ Usage: `npx image-dataset [options]`
 
 - `-a, --analysis`: Run analysis mode instead of download mode.
 
+**Benchmark Mode:**
+
+- `-b, --benchmark`: Measure the time needed to classify images.
+
 **Rename Mode:**
 
 - `-r, --rename`: Rename image filenames by content hash.

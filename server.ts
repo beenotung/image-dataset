@@ -11,7 +11,7 @@ import {
 import { main as renameByContentHash } from './rename-by-content-hash'
 import { basename, join } from 'path'
 import { rename } from 'fs/promises'
-import { getDirFilenames } from '@beenotung/tslib/fs'
+import { getDirFilenames, getDirFilenamesSync } from '@beenotung/tslib/fs'
 import { datasetCache, modelsCache } from './cache'
 import { ClassificationResult, topClassifyResult } from 'tensorflow-helpers'
 import { groupBy } from '@beenotung/tslib/functional'
@@ -24,6 +24,7 @@ import { later } from '@beenotung/tslib/async/wait'
 import { compare } from '@beenotung/tslib/compare'
 import { config } from './config'
 import { getClassNames, updateClassLabels, getClassLabelsInfo } from './model'
+import { Server } from 'http'
 
 let app = express()
 
@@ -41,9 +42,15 @@ app.use(
   express.static(resolveFile('node_modules/heatmap-helpers/bundle.js')),
 )
 app.use('/ionicons', express.static(resolveFile('node_modules/ionicons')))
-app.use('/classified', express.static('classified'))
-app.use('/unclassified', express.static('unclassified'))
-app.use('/saved_models', express.static('saved_models'))
+app.use('/downloaded', express.static(config.downloadedRootDir))
+app.use('/dataset', express.static(config.datasetRootDir))
+app.use('/classified', express.static(config.classifiedRootDir))
+app.use('/unclassified', express.static(config.unclassifiedRootDir))
+app.use('/saved_models/base_model', express.static(config.baseModelDir))
+app.use(
+  '/saved_models/classifier_model',
+  express.static(config.classifierModelDir),
+)
 app.use(express.static(resolveFile('public')))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
@@ -347,9 +354,51 @@ app.post('/undo', async (req, res) => {
   }
 })
 
+/*************/
+/* benchmark */
+/*************/
+
+app.get('/benchmark/labels', async (req, res) => {
+  let { classifierModel } = await modelsCache.get()
+  res.json({ labels: classifierModel.classNames })
+})
+
+app.get('/benchmark/images', async (req, res) => {
+  try {
+    let images: string[] = []
+    async function scanLabelDir(subdir: string, prefix: string) {
+      let filenames = await getDirFilenames(subdir)
+      for (let filename of filenames) {
+        let url = `${prefix}/${filename}`
+        images.push(url)
+      }
+    }
+    async function scanLabelsDir(dir: string, prefix: string) {
+      let labels = await getDirFilenames(dir)
+      for (let label of labels) {
+        let subdir = join(dir, label)
+        await scanLabelDir(subdir, `${prefix}/${label}`)
+      }
+    }
+    await scanLabelsDir(config.downloadedRootDir, 'downloaded')
+    await scanLabelsDir(config.classifiedRootDir, 'classified')
+    await scanLabelsDir(config.datasetRootDir, 'dataset')
+    await scanLabelDir(config.unclassifiedRootDir, 'unclassified')
+    res.json({ images })
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
+
 export function startServer(port: number) {
-  app.listen(port, () => {
-    print(port)
+  return new Promise<Server>((resolve, reject) => {
+    let server = app.listen(port, () => {
+      print(port)
+      resolve(server)
+    })
+    app.on('error', error => {
+      reject(error)
+    })
   })
 }
 

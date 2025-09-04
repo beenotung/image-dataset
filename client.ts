@@ -24,27 +24,67 @@ async function loadModels(args: { classNames: string[] }) {
     classNames: args.classNames,
   })
 
-  let input = tf.zeros([1, 224, 224, 3])
-  let x = tf.variable(input)
-  tf.tidy(() => {
-    debugger
-    const tape = tf.grad((x) => {
-      let embedding = baseModel.model.predict(x) as tf.Tensor
-      //above unchanged
-      //can check difference between tf.grad and tf.variablegrads
-      let y = classifierModel.classifierModel.predict(embedding) as tf.Tensor
-      return y
-    })
-    let z = tape(x)
-    //   tape.watch(x);
-    // let embedding = baseModel.model.predict(x) as tf.Tensor
-    // let y = classifierModel.classifierModel.predict(embedding)
-    //   const dy_dx = tape.gradient(y, x);
-    //   dy_dx.print();
-    //   return dy_dx
-  })
+  // let input = tf.ones([1, 224, 224, 3])
+  // let x = tf.variable(input)
+  // tf.tidy(() => {
+  //   debugger
+  //   const tape = tf.grad((x) => {
+  //     let embedding = baseModel.model.predict(x) as tf.Tensor
+  //     //above unchanged
+  //     //can check difference between tf.grad and tf.variablegrads
+  //     let y = classifierModel.classifierModel.predict(embedding) as tf.Tensor
+  //     return y
+  //   })
+  //   let z = tape(x)
+  //   z.print();
+  //   debugger
+  //   let canvas=document.createElement('canvas')
+  //   canvas.width = 224
+  //   canvas.height = 224
+  //   let context = canvas.getContext('2d')!
+  //   // Draw z (a tf.Tensor) to the canvas
+  //   // Assume z is [1, 224, 224, 3] and values are in [0, 1] or [0, 255]
+  //   let zData = z.squeeze().arraySync() as number[][][]; // [224, 224, 3]
+  //   let imageData = context.createImageData(224, 224);
+  //   for (let y = 0; y < 224; y++) {
+  //     for (let x = 0; x < 224; x++) {
+  //       let idx = (y * 224 + x) * 4;
+  //       let pixel = zData[y][x];
+  //       imageData.data[idx + 0] = Math.max(0, Math.min(255, Math.round(pixel[0] * 255)));
+  //       imageData.data[idx + 1] = Math.max(0, Math.min(255, Math.round(pixel[1] * 255)));
+  //       imageData.data[idx + 2] = Math.max(0, Math.min(255, Math.round(pixel[2] * 255)));
+  //       imageData.data[idx + 3] = 255;
+  //     }
+  //   }
+  //   context.putImageData(imageData, 0, 0);
+  //   document.body.appendChild(canvas)
+  // let embedding = baseModel.model.predict(x) as tf.Tensor
+  // let y = classifierModel.classifierModel.predict(embedding)
+  //   const dy_dx = tf.grad(y)(x);
+  //   dy_dx.print();
+  //   return dy_dx
+  // const composedFunction = (input: tf.Tensor) => {
+  //   const baseOutput = baseModel.model.predict(input) as tf.Tensor;
+  //   const classOutput = classifierModel.classifierModel.predict(baseOutput) as tf.Tensor;
+  //   // Sum both baseOutput and classOutput for gradient calculation
+  //   return baseOutput.sum().add(classOutput.sum());
+  // };
 
-  return classifierModel
+  //   let gradFunc = tf.grad((input: tf.Tensor) => {
+  //     let baseOutput = baseModel.model.predict(input) as tf.Tensor;
+  //     let classOutput = classifierModel.classifierModel.predict(baseOutput) as tf.Tensor;
+  //     // Return both outputs as an array for tf.grads
+  //     return baseOutput.sum().add(classOutput.sum());
+  //   });
+  //   let inputTensor = tf.tensor(input.arraySync());
+  //   let baseGrad = gradFunc(inputTensor);
+  //   baseGrad.print();
+  // })
+  return {
+    baseModel,
+    classifierModel,
+    classifyImage: classifierModel.classifyImage,
+  }
 }
 
 async function benchmark() {
@@ -86,7 +126,7 @@ async function benchmark() {
   let n = 5
   let i = 0
   for (let image of images) {
-    let result = await classifierModel.classifyImage(image)
+    let result = await classifierModel.classifierModel.classifyImage(image)
     i++
     document.body.textContent = `warm up ${i}/${n} images`
     if (i >= 5) {
@@ -100,7 +140,7 @@ async function benchmark() {
   i = 0
   let startTime = performance.now()
   for (let image of images) {
-    let result = await classifierModel.classifyImage(image)
+    let result = await classifierModel.classifierModel.classifyImage(image)
     i++
   }
   let endTime = performance.now()
@@ -121,71 +161,152 @@ async function benchmark() {
 }
 
 async function heatMap(image: HTMLImageElement) {
-  let classifierModel = await loadModels({
+  let container = image.parentElement!.querySelector('.heatmap-container')!
+  // debugger
+  let { baseModel, classifierModel } = await loadModels({
     classNames: ['others', 'cat', 'dog', 'human'],
   })
-  classifierModel.baseModel.model
-  classifierModel.classifierModel
+  // classifierModel.baseModel.model
+  // classifierModel.classifierModel
 
   let heatmapCanvas = document.createElement('canvas')
   heatmapCanvas.width = image.width
   heatmapCanvas.height = image.height
   let heatmapContext = heatmapCanvas.getContext('2d')!
   let heatmap_colors = generate_heatmap_values(
-    heatmap_schemes.red_transparent_blue,
+    // heatmap_schemes.red_transparent_blue,
+    heatmap_schemes.red_green_blue,
   )
-  let features = await getImageFeatures({
-    tf,
-    imageModel: classifierModel.baseModel,
-    image,
+  // let features = await getImageFeatures({
+  //   tf,
+  //   imageModel: classifierModel.baseModel,
+  //   image,
+  // })
+
+  // // [1 x 7 x 7 x 160]
+  // let data = (await features.spatialFeatures.array()) as number[][][][]
+
+  // heatmapContext.clearRect(0, 0, heatmapCanvas.width, heatmapCanvas.height)
+
+  // let map = data[0]
+  // let ROW = map.length
+  // let COL = map[0].length
+  // let FEATURE = map[0][0].length
+  // // FEATURE = 1
+
+  // let min = map[0][0][0]
+  // let max = map[0][0][0]
+
+  // for (let row = 0; row < ROW; row++) {
+  //   for (let col = 0; col < COL; col++) {
+  //     let value = 0
+  //     for (let feature_index = 0; feature_index < FEATURE; feature_index++) {
+  //       value += Math.abs(map[row][col][feature_index])
+  //     }
+  //     if (value < min) {
+  //       min = value
+  //     }
+  //     if (value > max) {
+  //       max = value
+  //     }
+  //   }
+  // }
+
+  // for (let row = 0; row < ROW; row++) {
+  //   for (let col = 0; col < COL; col++) {
+  //     let value = 0
+  //     for (let feature_index = 0; feature_index < FEATURE; feature_index++) {
+  //       value += Math.abs(map[row][col][feature_index])
+  //     }
+  //     value = (value - min) / (max - min)
+  //     let color = heatmap_colors[Math.floor(value * 255)]
+  //     heatmapContext.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]})`
+  //     // heatmapContext.fillStyle = `rgba(255, 0, 0, ${value})`
+  //     let left = (col / COL) * heatmapCanvas.width
+  //     let top = (row / ROW) * heatmapCanvas.height
+  //     let height = (1 / ROW) * heatmapCanvas.height
+  //     let width = (1 / COL) * heatmapCanvas.width
+  //     heatmapContext.fillRect(left, top, width, height)
+  //   }
+  // }
+
+  const tape = tf.grad((x) => {
+    let embedding = baseModel.model.predict(x) as tf.Tensor
+    // console.log(embedding.shape)
+    // return embedding
+
+    //above unchanged
+    //can check difference between tf.grad and tf.variablegrads
+    let y = classifierModel.classifierModel.predict(embedding) as tf.Tensor
+    return y
+
+    // let weights = tf.randomNormal([1280, 4])
+    // let result = embedding.matMul(weights)
+    // console.log(result.shape)
+    // return result
+
+    // y.print()
+    // return y
+    // return y.slice(0, 1)
   })
 
-  // [1 x 7 x 7 x 160]
-  let data = (await features.spatialFeatures.array()) as number[][][][]
+  let zData = tf.tidy(() => {
+    let x = tf.variable(tf.browser.fromPixels(image))
+    x = tf.image.resizeBilinear(x, [224, 224])
+    x = tf.div(x, 255)
+    x = tf.expandDims(x, 0)
 
-  heatmapContext.clearRect(0, 0, heatmapCanvas.width, heatmapCanvas.height)
+    // debugger
 
-  let map = data[0]
-  let ROW = map.length
-  let COL = map[0].length
-  let FEATURE = map[0][0].length
-  // FEATURE = 1
+    let z = tape(x)
 
-  let min = map[0][0][0]
-  let max = map[0][0][0]
+    // console.log('z range:', {
+    //   min: z.min().arraySync(),
+    //   max: z.max().arraySync(),
+    // })
 
-  for (let row = 0; row < ROW; row++) {
-    for (let col = 0; col < COL; col++) {
-      let value = 0
-      for (let feature_index = 0; feature_index < FEATURE; feature_index++) {
-        value += Math.abs(map[row][col][feature_index])
+    let min = z.min()
+    let max = z.max()
+    let range = tf.sub(max, min)
+    let normalized = tf.div(tf.sub(z, min), range)
+    z = normalized
+
+    // z.print()
+    // debugger
+
+    // Draw z (a tf.Tensor) to the canvas
+    // Assume z is [1, 224, 224, 3] and values are in [0, 1] or [0, 255]
+    let zData = z.squeeze().arraySync() as number[][][] // [224, 224, 3]
+    return zData
+  })
+
+  let canvas = document.createElement('canvas')
+  canvas.width = 224
+  canvas.height = 224
+  let context = canvas.getContext('2d')!
+
+  let imageData = context.createImageData(224, 224)
+  for (let y = 0; y < 224; y++) {
+    for (let x = 0; x < 224; x++) {
+      let idx = (y * 224 + x) * 4
+      let pixel = zData[y][x]
+      let r = pixel[0] * 255
+      let g = pixel[1] * 255
+      let b = pixel[2] * 255
+      let value = (r + g + b) / 3
+      let index = Math.floor(value )
+      let color = heatmap_colors[index]
+      if(!color){
+        console.log(value,index)
       }
-      if (value < min) {
-        min = value
-      }
-      if (value > max) {
-        max = value
-      }
+      imageData.data[idx + 0] = color[0]
+      imageData.data[idx + 1] = color[1]
+      imageData.data[idx + 2] = color[2]
+      imageData.data[idx + 3] = 255
     }
   }
-
-  for (let row = 0; row < ROW; row++) {
-    for (let col = 0; col < COL; col++) {
-      let value = 0
-      for (let feature_index = 0; feature_index < FEATURE; feature_index++) {
-        value += Math.abs(map[row][col][feature_index])
-      }
-      value = (value - min) / (max - min)
-      let color = heatmap_colors[Math.floor(value * 255)]
-      heatmapContext.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]})`
-      // heatmapContext.fillStyle = `rgba(255, 0, 0, ${value})`
-      let left = (col / COL) * heatmapCanvas.width
-      let top = (row / ROW) * heatmapCanvas.height
-      let height = (1 / ROW) * heatmapCanvas.height
-      let width = (1 / COL) * heatmapCanvas.width
-      heatmapContext.fillRect(left, top, width, height)
-    }
-  }
+  context.putImageData(imageData, 0, 0)
+  container.appendChild(canvas)
 
   return heatmapCanvas
 }
@@ -196,5 +317,5 @@ Object.assign(window, {
   cropAndResizeImageTensor,
   toTensor3D,
   benchmark,
-  heatMap,
+  render_cam_heatMap: heatMap,
 })

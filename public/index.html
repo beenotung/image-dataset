@@ -734,6 +734,9 @@
         // let context = image_canvas.getContext('2d')
         // context.drawImage(img, 0, 0, width, height)
 
+        render_cam_heatMap(img)
+        return
+
         let image_tensor = await tf.browser.fromPixels(img)
         let cropped_image_tensor = cropAndResizeImageTensor({
           imageTensor: image_tensor,

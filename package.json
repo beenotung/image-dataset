@@ -36,7 +36,7 @@
   ],
   "scripts": {
     "collect": "ts-node main.ts --listFile list.txt",
-    "start": "ts-node-dev server.ts",
+    "start": "ts-node-dev main.ts -w",
     "dev": "npm run bundle -- --watch",
     "test": "tsc --noEmit",
     "clean": "rimraf dist",

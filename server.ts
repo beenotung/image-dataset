@@ -396,7 +396,7 @@ export function startServer(port: number) {
       print(port)
       resolve(server)
     })
-    app.on('error', error => {
+    server.on('error', error => {
       reject(error)
     })
   })

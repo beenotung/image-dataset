@@ -1,3 +1,4 @@
+import './polyfill'
 import express from 'express'
 import { print } from 'listening-on'
 import { main as train } from './train'

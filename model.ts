@@ -9,12 +9,12 @@ import {
 import { join } from 'path'
 import { getDirFilenamesSync } from '@beenotung/tslib/fs'
 import {
-  ModelArtifactsWithClassNames,
   PreTrainedImageModels,
   loadImageClassifierModel,
   loadImageModel,
   calcHiddenLayerSize,
 } from 'tensorflow-helpers'
+import { ModelArtifactsWithClassNames } from 'tensorflow-helpers/internal'
 import { config } from './config'
 import { ask } from 'npm-init-helper'
 import { env } from './env'
@@ -28,6 +28,9 @@ export function getClassNames(options?: { fallback?: string[] }): string[] {
     )
     if (json.classNames) {
       return json.classNames
+    }
+    if (json.userDefinedMetadata?.classNames) {
+      return json.userDefinedMetadata.classNames as string[]
     }
   }
 

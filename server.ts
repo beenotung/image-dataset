@@ -2,7 +2,7 @@ import express from 'express'
 import { print } from 'listening-on'
 import { main as train } from './train'
 import { main as retrain } from './retrain'
-import { main as classify, stopClassify } from './classify'
+import { main as classify, getRunningRound, stopClassify } from './classify'
 import {
   restoreUnclassified,
   main as unclassifyAll,
@@ -237,10 +237,13 @@ app.get('/unclassified', async (req, res) => {
     let deadlineTimeout = 3 * SECOND
     let deadline = Date.now() + deadlineTimeout
 
+    let running_round = getRunningRound()
+
     let timer = startTimer('load unclassified (cached)')
     timer.setEstimateProgress(filenames.length)
     for (let filename of filenames) {
       if (metadata.epochs != epochs) break
+      if (running_round != getRunningRound()) break
       let image = unclassifiedImageCache.get(filename)
       if (image) {
         images.push(image)
@@ -260,6 +263,7 @@ app.get('/unclassified', async (req, res) => {
     timer.setEstimateProgress(newFilenames.length)
     for (let filename of newFilenames) {
       if (metadata.epochs != epochs) return
+      if (running_round != getRunningRound()) return
       let file = join('unclassified', filename)
       let results = await classifierModel.classifyImageFile(file)
       let result = topClassifyResult(results)

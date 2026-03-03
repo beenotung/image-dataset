@@ -17,6 +17,10 @@ export function stopClassify() {
   next_round++
 }
 
+export function getRunningRound() {
+  return next_round
+}
+
 export async function main() {
   let timer = startTimer('load models')
   let { classifierModel } = await modelsCache.get()

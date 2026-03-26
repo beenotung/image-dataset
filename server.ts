@@ -396,7 +396,11 @@ app.get('/benchmark/images', async (req, res) => {
 
 export function startServer(port: number) {
   return new Promise<Server>((resolve, reject) => {
-    let server = app.listen(port, () => {
+    let server = app.listen(port, error => {
+      if (error) {
+        reject(error)
+        return
+      }
       print(port)
       resolve(server)
     })
@@ -407,5 +411,8 @@ export function startServer(port: number) {
 }
 
 if (basename(process.argv[1]) == basename(__filename)) {
-  startServer(env.PORT)
+  startServer(env.PORT).catch(error => {
+    console.error(error)
+    process.exit(1)
+  })
 }

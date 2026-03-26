@@ -3,7 +3,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
-  rmdirSync,
+  rmSync,
   statSync,
 } from 'fs'
 import { join } from 'path'
@@ -262,14 +262,14 @@ export async function updateClassLabels(body: { classNames: string[] }) {
     for (let className of classesToRemove) {
       let dir = join(rootDir, className)
       if (existsSync(dir)) {
-        rmdirSync(dir)
+        rmSync(dir, { recursive: true })
       }
     }
   }
 
   // remove classifier model
   if (existsSync(config.classifierModelDir)) {
-    rmdirSync(config.classifierModelDir, { recursive: true })
+    rmSync(config.classifierModelDir, { recursive: true })
   }
 
   // create directories for new class names

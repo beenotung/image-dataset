@@ -1,7 +1,7 @@
 import { config } from 'dotenv'
 import populateEnv from 'populate-env'
 
-config()
+config({ quiet: true })
 
 export let env = {
   PORT: 8100,

@@ -24,14 +24,39 @@ export async function collectByKeyword(
 
   let page = await getPage()
 
+  async function waitForChallenge() {
+    for (;;) {
+      try {
+        let challenged =
+          /\/sorry\b/i.test(page.url()) ||
+          (await page.evaluate(
+            () =>
+              !!document.querySelector(
+                '#captcha-form, iframe[src*="recaptcha"]',
+              ),
+          ))
+        if (!challenged) return
+      } catch {
+        // ignore when page is navigating
+      }
+      cli.update(`${cli_prefix}please resolve the challenge in the browser...`)
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+  }
+
   await page.goto('https://images.google.com', {
     waitUntil: 'domcontentloaded',
   })
+  await waitForChallenge()
   await page.fill('form textarea[name="q"]', keyword)
   await page.evaluate(() => {
     let form = document.querySelector('form[role="search"]') as HTMLFormElement
     form.submit()
   })
+  await page.waitForURL(/https:\/\/www\.google\.com\/(search|sorry)/, {
+    waitUntil: 'domcontentloaded',
+  })
+  await waitForChallenge()
   await page.waitForURL(/^https:\/\/www\.google\.com\/search/, {
     waitUntil: 'domcontentloaded',
   })

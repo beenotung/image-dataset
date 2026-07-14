@@ -5,4 +5,5 @@ export let config = {
   unclassifiedRootDir: './unclassified',
   baseModelDir: './saved_models/base_model',
   classifierModelDir: './saved_models/classifier_model',
+  chromiumDir: './.chromium',
 }

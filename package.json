@@ -63,7 +63,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "formidable": "^3.5.4",
-    "graceful-playwright": "^1.6.0",
+    "graceful-playwright": "^1.7.0",
     "heatmap-helpers": "^0.1.1",
     "heatmap-values": "^1.0.4",
     "http-status": "^2.1.0",

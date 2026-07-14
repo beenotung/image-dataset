@@ -256,7 +256,11 @@ export async function cli() {
   }
 
   if (args.mode == 'download') {
-    setupGitIgnore([...gitIgnoreFiles.db, config.downloadedRootDir])
+    setupGitIgnore([
+      ...gitIgnoreFiles.db,
+      config.chromiumDir,
+      config.downloadedRootDir,
+    ])
     installPlaywright()
     let mod = await import('./collect')
     await mod.main(args.keywords)

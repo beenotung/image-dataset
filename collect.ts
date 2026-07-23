@@ -148,10 +148,14 @@ async function collectByKeywordFromGoogle(
             if (root) {
               root.scrollTop = root.scrollHeight
             }
-            await new Promise(resolve => setTimeout(resolve, 2000))
+            await new Promise(resolve => setTimeout(resolve, 1500))
 
             let count = document.querySelectorAll('[data-lpage]').length
             if (count > beforeCount) return
+
+            let atBottom =
+              window.innerHeight + window.scrollY >=
+              document.documentElement.scrollHeight - 100
 
             let moreLinks = document.querySelectorAll<HTMLAnchorElement>(
               'a[role="button"][href*="start="]',
@@ -159,11 +163,25 @@ async function collectByKeywordFromGoogle(
             let more = moreLinks[moreLinks.length - 1]
             if (more) {
               more.scrollIntoView({ behavior: 'smooth', block: 'center' })
-              await new Promise(resolve => setTimeout(resolve, 1000))
+              await new Promise(resolve => setTimeout(resolve, 500))
               let moreRect = more.getBoundingClientRect()
               if (moreRect.width * moreRect.height > 0) {
                 more.click()
-                await new Promise(resolve => setTimeout(resolve, 2000))
+                await new Promise(resolve => setTimeout(resolve, 1500))
+                if (
+                  document.querySelectorAll('[data-lpage]').length > beforeCount
+                ) {
+                  return
+                }
+              }
+            }
+
+            let bars = document.querySelectorAll('[role="progressbar"]')
+            let bar = bars[bars.length - 1]
+            if (bar) {
+              let rect = bar.getBoundingClientRect()
+              if (rect.width * rect.height > 0) {
+                await new Promise(resolve => setTimeout(resolve, 500))
                 if (
                   document.querySelectorAll('[data-lpage]').length > beforeCount
                 ) {
@@ -174,24 +192,9 @@ async function collectByKeywordFromGoogle(
               }
             }
 
-            let bars = document.querySelectorAll('[role="progressbar"]')
-            let bar = bars[bars.length - 1]
-            if (bar) {
-              let rect = bar.getBoundingClientRect()
-              if (rect.width * rect.height > 0) {
-                await new Promise(resolve => setTimeout(resolve, 1000))
-                if (
-                  document.querySelectorAll('[data-lpage]').length > beforeCount
-                ) {
-                  return
-                }
-                continue
-              }
-            }
-
             idle++
-            if (idle > 3) return
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            if (idle > (atBottom ? 1 : 2)) return
+            await new Promise(resolve => setTimeout(resolve, 500))
           }
         }, beforeCount)
         return
@@ -268,7 +271,7 @@ async function collectByKeywordFromGoogle(
     }
     if (count > 0 && count == lastCount) {
       attempt++
-      if (attempt > 3) {
+      if (attempt > 2) {
         break
       }
     }

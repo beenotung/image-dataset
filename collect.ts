@@ -1,11 +1,13 @@
+import { detectFileMime } from 'mime-detect'
 import { ProgressCli } from '@beenotung/tslib/progress-cli'
 import { createHash } from 'crypto'
 import { join } from 'path'
-import { mkdir, stat, writeFile } from 'fs/promises'
+import { mkdir, readFile, stat, writeFile } from 'fs/promises'
 import { find, seedRow } from 'better-sqlite3-proxy'
 import { proxy } from './proxy'
 import { config, SearchEngine } from './config'
 import { closeBrowser, getPage } from './browser'
+import { fileURLToPath } from 'url'
 
 let cli = new ProgressCli()
 
@@ -246,7 +248,9 @@ async function saveImage(options: {
   let { page_url, image_src, alt } = options.image
   let { cli_prefix, dir, keyword_id } = options
 
-  let result = await downloadImage(image_src)
+  let result = image_src.startsWith('file://')
+    ? await loadImage(image_src)
+    : await downloadImage(image_src)
 
   if (!result.ok) {
     cli.nextLine()
@@ -334,6 +338,17 @@ async function downloadImage(url: string) {
     return { ok: false as const, reason: String(error) }
   }
 
+  return { ok: true as const, mimeType, ext, buffer }
+}
+
+async function loadImage(url: string) {
+  let file = fileURLToPath(url)
+  let mimeType = await detectFileMime(file)
+  if (!mimeType?.startsWith('image/')) {
+    return { ok: false as const, reason: 'not an image' }
+  }
+  let ext = mimeType.split('/')[1].split(';')[0]
+  let buffer = await readFile(file)
   return { ok: true as const, mimeType, ext, buffer }
 }
 

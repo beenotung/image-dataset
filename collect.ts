@@ -137,10 +137,42 @@ async function collectByKeywordFromGoogle(
               behavior: 'smooth',
               block: 'end',
             })
+            window.scrollTo({
+              top: Math.max(
+                document.documentElement.scrollHeight,
+                document.body.scrollHeight,
+              ),
+              behavior: 'smooth',
+            })
+            let root = document.querySelector<HTMLElement>('#islrc')
+            if (root) {
+              root.scrollTop = root.scrollHeight
+            }
             await new Promise(resolve => setTimeout(resolve, 2000))
 
             let count = document.querySelectorAll('[data-lpage]').length
             if (count > beforeCount) return
+
+            let moreLinks = document.querySelectorAll<HTMLAnchorElement>(
+              'a[role="button"][href*="start="]',
+            )
+            let more = moreLinks[moreLinks.length - 1]
+            if (more) {
+              more.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              await new Promise(resolve => setTimeout(resolve, 1000))
+              let moreRect = more.getBoundingClientRect()
+              if (moreRect.width * moreRect.height > 0) {
+                more.click()
+                await new Promise(resolve => setTimeout(resolve, 2000))
+                if (
+                  document.querySelectorAll('[data-lpage]').length > beforeCount
+                ) {
+                  return
+                }
+                idle = 0
+                continue
+              }
+            }
 
             let bars = document.querySelectorAll('[role="progressbar"]')
             let bar = bars[bars.length - 1]

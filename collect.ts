@@ -92,14 +92,12 @@ async function collectByKeywordFromGoogle(
     waitUntil: 'domcontentloaded',
   })
 
-  type ImageItem = Awaited<ReturnType<typeof collectImages>>[number]
-
-  async function collectImages() {
+  async function collectImages(): Promise<ImageItem[]> {
     for (;;) {
       try {
         return await page.evaluate(async () => {
           let items = document.querySelectorAll<HTMLElement>('[data-lpage]')
-          let images = []
+          let images: ImageItem[] = []
           for (let item of items) {
             let page_url = item.dataset.lpage!
             let img = item.querySelector('img')!
@@ -205,81 +203,6 @@ async function collectByKeywordFromGoogle(
     }
   }
 
-  async function saveImage(image: ImageItem) {
-    let { page_url, image_src, alt } = image
-    let res
-    let reason = ''
-    for (let i = 0; i < 3; i++) {
-      try {
-        res = await fetch(image_src)
-        if (res.ok) {
-          break
-        }
-        reason = `HTTP ${res.status}`
-      } catch (error) {
-        reason = String(error)
-      }
-      if (i < 2) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-      }
-    }
-    if (!res?.ok) {
-      cli.nextLine()
-      cli.writeln(`${cli_prefix}skip image (${reason}): ${image_src}`)
-      return
-    }
-
-    let mimeType = res.headers.get('Content-Type')
-    if (!mimeType?.startsWith('image/')) {
-      return
-    }
-    let ext = mimeType.split('/')[1].split(';')[0]
-
-    let binary = await res.arrayBuffer()
-    let buffer = Buffer.from(binary)
-
-    let hash = createHash('sha256')
-    hash.write(buffer)
-    let filename = hash.digest().toString('hex') + '.' + ext
-
-    let domain = new URL(page_url).hostname
-    let domain_id = seedRow(proxy.domain, { domain })
-    let page_id = seedRow(proxy.page, { url: page_url }, { domain_id })
-    let src = storableImageUrl(image_src)
-
-    let row = find(proxy.image, { filename })
-    if (!row) {
-      let file = join(dir, filename)
-      let fileSize = await getFileSize(file)
-      if (fileSize != buffer.length) {
-        await writeFile(file, buffer)
-      }
-
-      let id = proxy.image.push({
-        filename,
-        page_id,
-        keyword_id,
-        src,
-        alt,
-        embedding: null,
-      })
-      row = proxy.image[id]
-    } else {
-      if (alt && (row.alt?.length || 0) < alt.length) {
-        row.alt = alt
-      }
-      if (src && !row.src) {
-        row.src = src
-      }
-    }
-    let image_id = row.id!
-    seedRow(proxy.image_keyword, { image_id, keyword_id })
-    seedRow(proxy.image_page, { image_id, page_id })
-    if (src) {
-      seedRow(proxy.image_url, { image_id, url: src })
-    }
-  }
-
   let lastCount = 0
   let attempt = 0
   for (;;) {
@@ -296,7 +219,7 @@ async function collectByKeywordFromGoogle(
     }
     cli.update(`${cli_prefix}searching "${keyword}": ${count} images ...`)
     for (let image of images.slice(lastCount)) {
-      await saveImage(image)
+      await saveImage({ image, cli_prefix, dir, keyword_id })
     }
     cli.update(
       `${cli_prefix}scrolling for more images of "${keyword}": ${count} images ...`,
@@ -306,6 +229,93 @@ async function collectByKeywordFromGoogle(
   }
   cli.update(`${cli_prefix}searched "${keyword}": ${lastCount} images.`)
   cli.nextLine()
+}
+
+type ImageItem = {
+  page_url: string
+  image_src: string
+  alt: string
+}
+
+async function saveImage(options: {
+  image: ImageItem
+  cli_prefix: string
+  dir: string
+  keyword_id: number
+}) {
+  let { page_url, image_src, alt } = options.image
+  let { cli_prefix, dir, keyword_id } = options
+  let res
+  let reason = ''
+  for (let i = 0; i < 3; i++) {
+    try {
+      res = await fetch(image_src)
+      if (res.ok) {
+        break
+      }
+      reason = `HTTP ${res.status}`
+    } catch (error) {
+      reason = String(error)
+    }
+    if (i < 2) {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+  }
+  if (!res?.ok) {
+    cli.nextLine()
+    cli.writeln(`${cli_prefix}skip image (${reason}): ${image_src}`)
+    return
+  }
+
+  let mimeType = res.headers.get('Content-Type')
+  if (!mimeType?.startsWith('image/')) {
+    return
+  }
+  let ext = mimeType.split('/')[1].split(';')[0]
+
+  let binary = await res.arrayBuffer()
+  let buffer = Buffer.from(binary)
+
+  let hash = createHash('sha256')
+  hash.write(buffer)
+  let filename = hash.digest().toString('hex') + '.' + ext
+
+  let domain = new URL(page_url).hostname
+  let domain_id = seedRow(proxy.domain, { domain })
+  let page_id = seedRow(proxy.page, { url: page_url }, { domain_id })
+  let src = storableImageUrl(image_src)
+
+  let row = find(proxy.image, { filename })
+  if (!row) {
+    let file = join(dir, filename)
+    let fileSize = await getFileSize(file)
+    if (fileSize != buffer.length) {
+      await writeFile(file, buffer)
+    }
+
+    let id = proxy.image.push({
+      filename,
+      page_id,
+      keyword_id,
+      src,
+      alt,
+      embedding: null,
+    })
+    row = proxy.image[id]
+  } else {
+    if (alt && (row.alt?.length || 0) < alt.length) {
+      row.alt = alt
+    }
+    if (src && !row.src) {
+      row.src = src
+    }
+  }
+  let image_id = row.id!
+  seedRow(proxy.image_keyword, { image_id, keyword_id })
+  seedRow(proxy.image_page, { image_id, page_id })
+  if (src) {
+    seedRow(proxy.image_url, { image_id, url: src })
+  }
 }
 
 async function getFileSize(file: string) {

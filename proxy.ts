@@ -32,8 +32,16 @@ export type Image = {
   filename: string
   keyword_id: null | number
   keyword?: Keyword
+  src: null | string
   alt: null | string
   embedding: null | string
+}
+
+export type ImageUrl = {
+  id?: null | number
+  image_id: number
+  image?: Image
+  url: string
 }
 
 export type ImageKeyword = {
@@ -57,6 +65,7 @@ export type DBProxy = {
   domain: Domain[]
   page: Page[]
   image: Image[]
+  image_url: ImageUrl[]
   image_keyword: ImageKeyword[]
   image_page: ImagePage[]
 }
@@ -74,6 +83,10 @@ export let proxy = proxySchema<DBProxy>({
       /* foreign references */
       ['page', { field: 'page_id', table: 'page' }],
       ['keyword', { field: 'keyword_id', table: 'keyword' }],
+    ],
+    image_url: [
+      /* foreign references */
+      ['image', { field: 'image_id', table: 'image' }],
     ],
     image_keyword: [
       /* foreign references */

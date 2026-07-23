@@ -40,6 +40,7 @@ Usage: `npx image-dataset [options]`
 
 - `-l, --listFile <path>` : Specify a file containing a list of search terms. Each term should be on a new line.
 - `-k, --keyword "<term>"` : Add a single search term for processing. Use quotes if the term contains spaces.
+- `-p, --page <url>` : Collect images from a page URL or local HTML file. Can be repeated.
 - `-e, --engine <name>` : Image search engine to collect from. Default is `"google"`.
 - `-d, --downloadDir <dir>` : Set the directory where downloads will be saved. Default is "./downloaded".
 
@@ -67,7 +68,10 @@ Usage: `npx image-dataset [options]`
 
 **Notes:**
 
-- In download mode, at least one search term must be specified, either using `--listFile` or `--keyword`.
+- In download mode, specify at least one collection source: search terms with `--listFile` or `--keyword`, or a page URL with `--page`.
+- Search terms and pages can be combined in one run.
+- Search terms use the search engine (default: google). `--engine` is optional.
+- `-p` is short for `--port` with a number, `--page` with a URL or path.
 - A mode is automatically selected when a mode-specific option is given. If none are selected, the help message will guide you.
 
 ## License

@@ -59,6 +59,7 @@ page
 id integer PK
 url text unique
 domain_id integer FK >0- domain.id
+complete_time integer NULL
 
 
 domain

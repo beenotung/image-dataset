@@ -253,22 +253,32 @@ async function collectByKeywordFromGoogle(
     let domain = new URL(page_url).hostname
     let domain_id = seedRow(proxy.domain, { domain })
     let page_id = seedRow(proxy.page, { url: page_url }, { domain_id })
+    let src = storableImageUrl(image_src)
 
     if (!row) {
       let id = proxy.image.push({
         filename,
         page_id,
         keyword_id,
+        src,
         alt,
         embedding: null,
       })
       row = proxy.image[id]
-    } else if ((row.alt?.length || 0) < alt.length) {
-      row.alt = alt
+    } else {
+      if (alt && (row.alt?.length || 0) < alt.length) {
+        row.alt = alt
+      }
+      if (src && !row.src) {
+        row.src = src
+      }
     }
     let image_id = row.id!
     seedRow(proxy.image_keyword, { image_id, keyword_id })
     seedRow(proxy.image_page, { image_id, page_id })
+    if (src) {
+      seedRow(proxy.image_url, { image_id, url: src })
+    }
   }
 
   let lastCount = 0
@@ -305,6 +315,17 @@ async function getFileSize(file: string) {
   } catch (error) {
     return 0
   }
+}
+
+function storableImageUrl(image_src: string) {
+  image_src = image_src.trim()
+  if (!image_src) {
+    return null
+  }
+  if (image_src.startsWith('data:')) {
+    return null
+  }
+  return image_src
 }
 
 export async function main(keywords: string[]) {

@@ -28,6 +28,7 @@ id integer PK
 page_id integer NULL FK >0- page.id
 filename text unique
 keyword_id integer NULL FK >0- keyword.id
+src text NULL
 alt text NULL
 embedding text NULL
 
@@ -44,6 +45,13 @@ image_page
 id integer PK
 image_id integer FK >0- image.id
 page_id integer FK >0- page.id
+
+
+image_url
+---------
+id integer PK
+image_id integer FK >0- image.id
+url text
 
 
 page
@@ -71,5 +79,6 @@ domain text unique
 # image (150, 291)
 # image_keyword (550, 396)
 # image_page (550, 220)
+# image_url (850, 291)
 # page (150, 90)
 # domain (550, 46)

@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'fs'
 import { extract_lines } from '@beenotung/tslib/string'
 import { resolveFile } from './file'
-import { config, ImageSourceSite } from './config'
+import { config, SearchEngine } from './config'
 import { env } from './env'
 import { setupDB } from './setup'
 import { execSync } from 'child_process'
@@ -47,8 +47,7 @@ General:
 Download Mode:
   -l, --listFile <path>       Specify a file containing a list of search terms. Each term should be on a new line.
   -k, --keyword "<term>"      Add a single search term for processing. Use quotes if the term contains spaces.
-  -s, --site <name>           Image source site to collect from. Default is "google".
-      --source <name>         Alias for --site.
+  -e, --engine <name>         Image search engine to collect from. Default is "google".
   -d, --downloadDir <dir>     Set the directory where downloads will be saved. Default is "./downloaded".
 
 Analysis Mode:
@@ -70,7 +69,7 @@ Web UI Mode:
                               4-5 for high complexity.
 
 Notes:
-  - In download mode, at least one keyword must be specified, either using --listFile or --keyword.
+  - In download mode, at least one search term must be specified, either using --listFile or --keyword.
   - A mode is automatically selected when a mode-specific option is given. If none are selected, the help message will guide you.
 `.trim(),
         )
@@ -105,16 +104,15 @@ Notes:
         i++
         break
       }
-      case '-s':
-      case '--site':
-      case '--source': {
+      case '-e':
+      case '--engine': {
         if (!next) {
           showVersion(console.error)
-          console.error('Error: missing site name after --site')
+          console.error('Error: missing engine name after --engine')
           process.exit(1)
         }
         mode = 'download'
-        config.imageSourceSite = parseImageSourceSite(next)
+        config.searchEngine = parseSearchEngine(next)
         i++
         break
       }
@@ -223,13 +221,13 @@ function readListFile(file: string) {
   return lines
 }
 
-function parseImageSourceSite(name: string): ImageSourceSite {
+function parseSearchEngine(name: string): SearchEngine {
   if (name == 'google') {
     return name
   }
   showVersion(console.error)
-  console.error('Error: unsupported site: ' + JSON.stringify(name))
-  console.error('Supported sites: google')
+  console.error('Error: unsupported engine: ' + JSON.stringify(name))
+  console.error('Supported engines: google')
   process.exit(1)
 }
 

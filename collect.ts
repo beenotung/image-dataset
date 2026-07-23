@@ -416,7 +416,7 @@ async function downloadImage(url: string) {
     return { ok: false as const, reason: 'not an image' }
   }
 
-  let ext = mimeType.split('/')[1].split(';')[0]
+  let ext = mimeType.split('/')[1].split(';')[0].split('+')[0]
 
   let buffer
   try {
@@ -435,7 +435,7 @@ async function loadImage(url: string) {
   if (!mimeType?.startsWith('image/')) {
     return { ok: false as const, reason: 'not an image' }
   }
-  let ext = mimeType.split('/')[1].split(';')[0]
+  let ext = mimeType.split('/')[1].split(';')[0].split('+')[0]
   let buffer = await readFile(file)
   return { ok: true as const, mimeType, ext, buffer }
 }

@@ -22,6 +22,7 @@ export type Page = {
   id?: null | number
   url: string
   domain_id: number
+  complete_time?: null | number
   domain?: Domain
 }
 

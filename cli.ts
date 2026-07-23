@@ -1,6 +1,7 @@
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'fs'
 import { extract_lines } from '@beenotung/tslib/string'
 import { resolveFile } from './file'
+import { normalizeUrl } from './page-url'
 import { config, SearchEngine } from './config'
 import { env } from './env'
 import { setupDB } from './setup'
@@ -19,6 +20,7 @@ type Mode =
 
 function parseArguments() {
   let keywords: string[] = []
+  let pages: string[] = []
   let mode: Mode = null
   let args = process.argv
   if (args.length == 2) {
@@ -31,6 +33,16 @@ function parseArguments() {
     let arg = args[i]
     let next = args[i + 1]
     switch (arg) {
+      case '-p': {
+        if (!next) {
+          showVersion(console.error)
+          console.error('Error: missing port number or page URL after -p')
+          process.exit(1)
+        }
+        args[i] = +next ? '--port' : '--page'
+        i--
+        continue
+      }
       case '-h':
       case '--help': {
         showVersion(console.log)
@@ -47,6 +59,7 @@ General:
 Download Mode:
   -l, --listFile <path>       Specify a file containing a list of search terms. Each term should be on a new line.
   -k, --keyword "<term>"      Add a single search term for processing. Use quotes if the term contains spaces.
+  -p, --page <url>            Collect images from a page URL or local HTML file. Can be repeated.
   -e, --engine <name>         Image search engine to collect from. Default is "google".
   -d, --downloadDir <dir>     Set the directory where downloads will be saved. Default is "./downloaded".
 
@@ -69,7 +82,10 @@ Web UI Mode:
                               4-5 for high complexity.
 
 Notes:
-  - In download mode, at least one search term must be specified, either using --listFile or --keyword.
+  - In download mode, specify at least one collection source: search terms with --listFile or --keyword, or a page URL with --page.
+  - Search terms and pages can be combined in one run.
+  - Search terms use the search engine (default: google). --engine is optional.
+  - "-p" is short for "--port" with a number, "--page" with a URL or path.
   - A mode is automatically selected when a mode-specific option is given. If none are selected, the help message will guide you.
 `.trim(),
         )
@@ -101,6 +117,17 @@ Notes:
           process.exit(1)
         }
         keywords.push(next)
+        i++
+        break
+      }
+      case '--page': {
+        mode = 'download'
+        if (!next) {
+          showVersion(console.error)
+          console.error('Error: missing page URL after --page')
+          process.exit(1)
+        }
+        pages.push(parsePageUrl(next))
         i++
         break
       }
@@ -153,7 +180,6 @@ Notes:
         mode = 'webUI'
         break
       }
-      case '-p':
       case '--port': {
         if (!next) {
           showVersion(console.error)
@@ -197,13 +223,15 @@ Notes:
     console.error('Run "npx image-dataset --help" to see help message')
     process.exit(1)
   }
-  if (mode == 'download' && keywords.length == 0) {
+  if (mode == 'download' && keywords.length == 0 && pages.length == 0) {
     showVersion(console.error)
-    console.error('Error: missing keywords')
-    console.error('Either specify with --keyword or --listFile')
+    console.error('Error: missing collection source')
+    console.error(
+      'Specify search terms with --keyword or --listFile, or a page with --page',
+    )
     process.exit(1)
   }
-  return { keywords, mode }
+  return { keywords, pages, mode }
 }
 
 function showVersion(log: typeof console.log) {
@@ -229,6 +257,21 @@ function parseSearchEngine(name: string): SearchEngine {
   console.error('Error: unsupported engine: ' + JSON.stringify(name))
   console.error('Supported engines: google')
   process.exit(1)
+}
+
+function parsePageUrl(url: string) {
+  try {
+    return normalizeUrl(url)
+  } catch (error) {
+    showVersion(console.error)
+    console.error(
+      'Error: invalid page URL after --page: ' + JSON.stringify(url),
+    )
+    if (error instanceof Error && error.message) {
+      console.error(error.message)
+    }
+    process.exit(1)
+  }
 }
 
 export async function cli() {
@@ -287,7 +330,7 @@ export async function cli() {
     ])
     installPlaywright()
     let mod = await import('./collect')
-    await mod.main(args.keywords)
+    await mod.main({ keywords: args.keywords, pages: args.pages })
     return
   }
 

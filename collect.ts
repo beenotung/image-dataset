@@ -8,6 +8,8 @@ import { proxy } from './proxy'
 import { config, SearchEngine } from './config'
 import { closeBrowser, getPage } from './browser'
 import { fileURLToPath } from 'url'
+import { urlToDomain, urlToFolderName } from './page-url'
+import { Page } from 'playwright'
 
 let cli = new ProgressCli()
 
@@ -24,6 +26,90 @@ export async function collectByKeyword(
       throw new Error('unsupported search engine: ' + engine)
     }
   }
+}
+
+export async function collectFromPage(options: {
+  url: string
+  cli_prefix?: string
+}) {
+  let { url } = options
+  let cli_prefix = options.cli_prefix || ''
+  let folder = urlToFolderName(url)
+
+  cli.update(`${cli_prefix}collecting from ${url}...`)
+
+  let dir = join(config.downloadedRootDir, folder)
+  await mkdir(dir, { recursive: true })
+
+  let domain = urlToDomain(url)
+  let domain_id = seedRow(proxy.domain, { domain })
+  seedRow(proxy.page, { url }, { domain_id, complete_time: null })
+
+  let page = await getPage()
+  await page.goto(url, { waitUntil: 'domcontentloaded' })
+  await scrollPageForLazyImages(page)
+
+  let images = await collectImagesFromPage(page, url)
+
+  cli.update(`${cli_prefix}collecting from ${url}: ${images.length} images ...`)
+  for (let image of images) {
+    await saveImage({
+      image,
+      cli_prefix,
+      dir,
+      keyword_id: null,
+    })
+  }
+  cli.update(`${cli_prefix}collected from ${url}: ${images.length} images.`)
+  cli.nextLine()
+}
+
+async function scrollPageForLazyImages(
+  page: Awaited<ReturnType<typeof getPage>>,
+) {
+  await page.evaluate(async () => {
+    let lastHeight = 0
+    for (let i = 0; i < 20; i++) {
+      window.scrollTo(0, document.documentElement.scrollHeight)
+      await new Promise(resolve => setTimeout(resolve, 500))
+      let height = document.documentElement.scrollHeight
+      if (height == lastHeight) {
+        break
+      }
+      lastHeight = height
+    }
+    window.scrollTo(0, 0)
+  })
+}
+
+async function collectImagesFromPage(page: Page, page_url: string) {
+  return page.evaluate(page_url => {
+    let pageBase = new URL(page_url)
+    let images: ImageItem[] = []
+    let seen = new Set<string>()
+    for (let img of document.querySelectorAll('img')) {
+      let image_src =
+        img.currentSrc ||
+        img.src ||
+        img.getAttribute('data-src') ||
+        img.getAttribute('data-lazy-src') ||
+        ''
+      if (!image_src || image_src.startsWith('data:')) {
+        continue
+      }
+      try {
+        image_src = new URL(image_src, pageBase).href
+      } catch {
+        continue
+      }
+      if (seen.has(image_src)) {
+        continue
+      }
+      seen.add(image_src)
+      images.push({ page_url, image_src, alt: img.alt || '' })
+    }
+    return images
+  }, page_url)
 }
 
 async function collectByKeywordFromGoogle(
@@ -243,7 +329,7 @@ async function saveImage(options: {
   image: ImageItem
   cli_prefix: string
   dir: string
-  keyword_id: number
+  keyword_id: number | null
 }) {
   let { page_url, image_src, alt } = options.image
   let { cli_prefix, dir, keyword_id } = options
@@ -264,7 +350,7 @@ async function saveImage(options: {
   hash.write(buffer)
   let filename = hash.digest().toString('hex') + '.' + ext
 
-  let domain = new URL(page_url).hostname
+  let domain = urlToDomain(page_url)
   let domain_id = seedRow(proxy.domain, { domain })
   let page_id = seedRow(proxy.page, { url: page_url }, { domain_id })
   let src = storableImageUrl(image_src)
@@ -295,7 +381,9 @@ async function saveImage(options: {
     }
   }
   let image_id = row.id!
-  seedRow(proxy.image_keyword, { image_id, keyword_id })
+  if (keyword_id) {
+    seedRow(proxy.image_keyword, { image_id, keyword_id })
+  }
   seedRow(proxy.image_page, { image_id, page_id })
   if (src) {
     seedRow(proxy.image_url, { image_id, url: src })
@@ -371,11 +459,30 @@ function storableImageUrl(image_src: string) {
   return image_src
 }
 
-export async function main(keywords: string[]) {
-  let n = keywords.length
-  for (let i = 0; i < n; i++) {
-    let cli_prefix = `[${i + 1}/${n}] `
-    let keyword = keywords[i]
+export async function main(options: { keywords: string[]; pages: string[] }) {
+  let { keywords, pages } = options
+
+  let n = pages.length + keywords.length
+  if (n === 0) {
+    return
+  }
+
+  let i = 0
+
+  for (let url of pages) {
+    i++
+    let cli_prefix = `[${i}/${n}] `
+    if (find(proxy.page, { url })?.complete_time) {
+      console.log(`${cli_prefix}skip page ${url}`)
+      continue
+    }
+    await collectFromPage({ url, cli_prefix })
+    find(proxy.page, { url })!.complete_time = Date.now()
+  }
+
+  for (let keyword of keywords) {
+    i++
+    let cli_prefix = `[${i}/${n}] `
     if (find(proxy.keyword, { keyword })?.complete_time) {
       console.log(`${cli_prefix}skip "${keyword}"`)
       continue
@@ -383,5 +490,6 @@ export async function main(keywords: string[]) {
     await collectByKeyword(keyword, { cli_prefix })
     find(proxy.keyword, { keyword })!.complete_time = Date.now()
   }
+
   await closeBrowser()
 }

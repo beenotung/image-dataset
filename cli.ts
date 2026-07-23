@@ -46,7 +46,7 @@ General:
 
 Download Mode:
   -l, --listFile <path>       Specify a file containing a list of search terms. Each term should be on a new line.
-  -s, --searchTerm "<term>"   Add a single search term for processing. Use quotes if the term contains spaces.
+  -k, --keyword "<term>"      Add a single search term for processing. Use quotes if the term contains spaces.
   -d, --downloadDir <dir>     Set the directory where downloads will be saved. Default is "./downloaded".
 
 Analysis Mode:
@@ -68,7 +68,7 @@ Web UI Mode:
                               4-5 for high complexity.
 
 Notes:
-  - In download mode, at least one search term must be specified, either using --listFile or --searchTerm.
+  - In download mode, at least one keyword must be specified, either using --listFile or --keyword.
   - A mode is automatically selected when a mode-specific option is given. If none are selected, the help message will guide you.
 `.trim(),
         )
@@ -91,12 +91,12 @@ Notes:
         i++
         break
       }
-      case '-s':
-      case '--searchTerm': {
+      case '-k':
+      case '--keyword': {
         mode = 'download'
         if (!next) {
           showVersion(console.error)
-          console.error('Error: missing search term after --searchTerm')
+          console.error('Error: missing search term after --keyword')
           process.exit(1)
         }
         keywords.push(next)
@@ -187,7 +187,7 @@ Notes:
   if (mode == 'download' && keywords.length == 0) {
     showVersion(console.error)
     console.error('Error: missing keywords')
-    console.error('Either specify with --searchTerm or --listFile')
+    console.error('Either specify with --keyword or --listFile')
     process.exit(1)
   }
   return { keywords, mode }

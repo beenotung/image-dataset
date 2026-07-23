@@ -245,36 +245,16 @@ async function saveImage(options: {
 }) {
   let { page_url, image_src, alt } = options.image
   let { cli_prefix, dir, keyword_id } = options
-  let res
-  let reason = ''
-  for (let i = 0; i < 3; i++) {
-    try {
-      res = await fetch(image_src)
-      if (res.ok) {
-        break
-      }
-      reason = `HTTP ${res.status}`
-    } catch (error) {
-      reason = String(error)
-    }
-    if (i < 2) {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-    }
-  }
-  if (!res?.ok) {
+
+  let result = await downloadImage(image_src)
+
+  if (!result.ok) {
     cli.nextLine()
-    cli.writeln(`${cli_prefix}skip image (${reason}): ${image_src}`)
+    cli.writeln(`${cli_prefix}skip image (${result.reason}): ${image_src}`)
     return
   }
 
-  let mimeType = res.headers.get('Content-Type')
-  if (!mimeType?.startsWith('image/')) {
-    return
-  }
-  let ext = mimeType.split('/')[1].split(';')[0]
-
-  let binary = await res.arrayBuffer()
-  let buffer = Buffer.from(binary)
+  let { ext, buffer } = result
 
   let hash = createHash('sha256')
   hash.write(buffer)
@@ -316,6 +296,45 @@ async function saveImage(options: {
   if (src) {
     seedRow(proxy.image_url, { image_id, url: src })
   }
+}
+
+async function downloadImage(url: string) {
+  let res
+  let reason = ''
+  for (let i = 0; i < 3; i++) {
+    try {
+      res = await fetch(url)
+      if (res.ok) {
+        break
+      }
+      reason = `HTTP ${res.status}`
+    } catch (error) {
+      reason = String(error)
+    }
+    if (i < 2) {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+  }
+  if (!res?.ok) {
+    return { ok: false as const, reason }
+  }
+
+  let mimeType = res.headers.get('Content-Type')
+  if (!mimeType?.startsWith('image/')) {
+    return { ok: false as const, reason: 'not an image' }
+  }
+
+  let ext = mimeType.split('/')[1].split(';')[0]
+
+  let buffer
+  try {
+    let binary = await res.arrayBuffer()
+    buffer = Buffer.from(binary)
+  } catch (error) {
+    return { ok: false as const, reason: String(error) }
+  }
+
+  return { ok: true as const, mimeType, ext, buffer }
 }
 
 async function getFileSize(file: string) {

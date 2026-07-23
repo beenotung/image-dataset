@@ -4,22 +4,22 @@ import { join } from 'path'
 import { mkdir, stat, writeFile } from 'fs/promises'
 import { find, seedRow } from 'better-sqlite3-proxy'
 import { proxy } from './proxy'
-import { config, ImageSourceSite } from './config'
+import { config, SearchEngine } from './config'
 import { closeBrowser, getPage } from './browser'
 
 let cli = new ProgressCli()
 
 export async function collectByKeyword(
   keyword: string,
-  options: { cli_prefix?: string; site?: ImageSourceSite } = {},
+  options: { cli_prefix?: string; engine?: SearchEngine } = {},
 ) {
-  let site = options.site ?? config.imageSourceSite
-  switch (site) {
+  let engine = options.engine ?? config.searchEngine
+  switch (engine) {
     case 'google':
       return collectByKeywordFromGoogle(keyword, options)
     default: {
-      site satisfies never
-      throw new Error('unsupported site: ' + site)
+      engine satisfies never
+      throw new Error('unsupported search engine: ' + engine)
     }
   }
 }

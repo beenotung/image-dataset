@@ -21,6 +21,8 @@ export async function collectByKeyword(
   switch (engine) {
     case 'google':
       return collectByKeywordFromGoogle(keyword, options)
+    case 'bing':
+      return collectByKeywordFromBing(keyword, options)
     default: {
       engine satisfies never
       throw new Error('unsupported search engine: ' + engine)
@@ -289,6 +291,121 @@ async function collectByKeywordFromGoogle(
         await waitForChallenge()
       }
     }
+  }
+
+  let lastCount = 0
+  let attempt = 0
+  for (;;) {
+    let images = await collectImages()
+    let count = images.length
+    if (count != lastCount) {
+      attempt = 0
+    }
+    if (count > 0 && count == lastCount) {
+      attempt++
+      if (attempt > 2) {
+        break
+      }
+    }
+    cli.update(`${cli_prefix}searching "${keyword}": ${count} images ...`)
+    for (let image of images.slice(lastCount)) {
+      await saveImage({ image, cli_prefix, dir, keyword_id })
+    }
+    cli.update(
+      `${cli_prefix}scrolling for more images of "${keyword}": ${count} images ...`,
+    )
+    await scrollForMore(count)
+    lastCount = count
+  }
+  cli.update(`${cli_prefix}searched "${keyword}": ${lastCount} images.`)
+  cli.nextLine()
+}
+
+async function collectByKeywordFromBing(
+  keyword: string,
+  options: { cli_prefix?: string } = {},
+) {
+  let cli_prefix = options.cli_prefix || ''
+
+  cli.update(`${cli_prefix}searching "${keyword}"...`)
+
+  let dir = join(config.downloadedRootDir, keyword)
+  await mkdir(dir, { recursive: true })
+
+  let keyword_id = seedRow(proxy.keyword, { keyword })
+
+  let page = await getPage()
+  let searchUrl =
+    'https://www.bing.com/images/search?q=' + encodeURIComponent(keyword)
+
+  await page.goto(searchUrl, {
+    waitUntil: 'domcontentloaded',
+  })
+  await page.waitForSelector('a.iusc', { timeout: 30000 })
+
+  async function collectImages(): Promise<ImageItem[]> {
+    return page.evaluate(() => {
+      let images: ImageItem[] = []
+      let seen = new Set<string>()
+      for (let link of document.querySelectorAll<HTMLAnchorElement>('a.iusc')) {
+        let metadata = link.getAttribute('m')
+        if (!metadata) {
+          continue
+        }
+        try {
+          let data = JSON.parse(metadata)
+          let image_src = data.murl
+          let page_url = data.purl
+          if (!image_src || !page_url || seen.has(image_src)) {
+            continue
+          }
+          seen.add(image_src)
+          images.push({
+            page_url,
+            image_src,
+            alt: String(data.t || '').replace(/\u{e000}|\u{e001}/gu, ''),
+          })
+        } catch {
+          continue
+        }
+      }
+      return images
+    })
+  }
+
+  async function scrollForMore(beforeCount: number) {
+    await page.evaluate(async beforeCount => {
+      let idle = 0
+      for (;;) {
+        let items = document.querySelectorAll('a.iusc')
+        let item = items[items.length - 1]
+        if (!item) {
+          return
+        }
+        item.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end',
+        })
+        window.scrollTo({
+          top: Math.max(
+            document.documentElement.scrollHeight,
+            document.body.scrollHeight,
+          ),
+          behavior: 'smooth',
+        })
+        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        let count = document.querySelectorAll('a.iusc').length
+        if (count > beforeCount) {
+          return
+        }
+
+        idle++
+        if (idle > 2) {
+          return
+        }
+      }
+    }, beforeCount)
   }
 
   let lastCount = 0

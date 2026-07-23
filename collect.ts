@@ -517,6 +517,9 @@ async function downloadImage(url: string) {
         break
       }
       reason = `HTTP ${res.status}`
+      if (res.status === 403) {
+        return await browseImage({ url, reason })
+      }
     } catch (error) {
       reason = String(error)
     }
@@ -530,7 +533,7 @@ async function downloadImage(url: string) {
 
   let mimeType = res.headers.get('Content-Type')
   if (!mimeType?.startsWith('image/')) {
-    return { ok: false as const, reason: 'not an image' }
+    return await browseImage({ url, reason: 'not an image' })
   }
 
   let ext = mimeType.split('/')[1].split(';')[0].split('+')[0]
@@ -544,6 +547,73 @@ async function downloadImage(url: string) {
   }
 
   return { ok: true as const, mimeType, ext, buffer }
+}
+
+async function browseImage(args: { url: string; reason: string }) {
+  let { url, reason } = args
+  let page = await getPage()
+  let context = page.context()
+  page = await context.newPage()
+  try {
+    let res = await page.goto(url, { waitUntil: 'load' })
+    if (!res || !res.ok()) {
+      return { ok: false as const, reason }
+    }
+    let mimeType = res.headers()['content-type']
+    if (mimeType.startsWith('image/')) {
+      let ext = mimeType.split('/')[1].split(';')[0].split('+')[0]
+      let body = await res.body()
+      if (body) {
+        let buffer = Buffer.from(body)
+        return { ok: true as const, mimeType, ext, buffer }
+      }
+    }
+    let image = await page.evaluate(async () => {
+      for (let img of document.querySelectorAll('img')) {
+        let src =
+          img.src ||
+          img.currentSrc ||
+          img.getAttribute('data-src') ||
+          img.getAttribute('data-lazy-src') ||
+          ''
+        if (!src || src.startsWith('data:')) {
+          continue
+        }
+        try {
+          src = new URL(src, location.href).href
+          let res = await fetch(src)
+          if (!res.ok) {
+            continue
+          }
+          let mimeType = res.headers.get('Content-Type')
+          if (!mimeType?.startsWith('image/')) {
+            continue
+          }
+          let ext = mimeType.split('/')[1].split(';')[0].split('+')[0]
+          let blob = await res.blob()
+          let dataUrl = await new Promise<string>((resolve, reject) => {
+            let reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.onerror = () => reject(reader.error)
+            reader.readAsDataURL(blob)
+          })
+          return { src, dataUrl, mimeType, ext }
+        } catch {
+          continue
+        }
+      }
+    })
+    if (!image) {
+      return { ok: false as const, reason }
+    }
+    let { dataUrl, ...rest } = image
+    let buffer = Buffer.from(image.dataUrl.split(',')[1], 'base64')
+    return { ok: true as const, buffer, ...rest }
+  } catch (error) {
+    return { ok: false as const, reason: String(error) }
+  } finally {
+    await page.close()
+  }
 }
 
 async function loadImage(url: string) {

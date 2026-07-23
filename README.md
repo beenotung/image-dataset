@@ -6,7 +6,7 @@ Tool to build image dataset: collect, classify, review
 
 ## Key Steps
 
-- [x] Collect images from Google Search, specific page URLs, or local HTML files
+- [x] Collect images from search engines, specific page URLs, or local HTML files
 - [x] Augment images to increase robustness (using [augment-image](https://github.com/beenotung/augment-image) cli)
 - [x] Classify images with transfer learning
 - [x] Review the classify result to ensure data quality and evaluate model accuracy
@@ -41,7 +41,7 @@ Usage: `npx image-dataset [options]`
 - `-l, --listFile <path>` : Specify a file containing a list of search terms. Each term should be on a new line.
 - `-k, --keyword "<term>"` : Add a single search term for processing. Use quotes if the term contains spaces.
 - `-p, --page <url>` : Collect images from a page URL or local HTML file. Can be repeated.
-- `-e, --engine <name>` : Image search engine to collect from. Default is `"google"`.
+- `-e, --engine <name>` : Image search engine to collect from. Default is "google". Supported: google, bing.
 - `-d, --downloadDir <dir>` : Set the directory where downloads will be saved. Default is "./downloaded".
 
 **Analysis Mode:**
@@ -70,7 +70,6 @@ Usage: `npx image-dataset [options]`
 
 - In download mode, specify at least one collection source: search terms with `--listFile` or `--keyword`, or a page URL with `--page`.
 - Search terms and pages can be combined in one run.
-- Search terms use the search engine (default: google). `--engine` is optional.
 - `-p` is short for `--port` with a number, `--page` with a URL or path.
 - A mode is automatically selected when a mode-specific option is given. If none are selected, the help message will guide you.
 

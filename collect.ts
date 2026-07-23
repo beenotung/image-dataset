@@ -123,29 +123,45 @@ async function collectByKeywordFromGoogle(
     }
   }
 
-  async function scrollToBottom() {
+  async function scrollForMore(beforeCount: number) {
     for (;;) {
       try {
-        await page.evaluate(async () => {
+        await page.evaluate(async beforeCount => {
+          let idle = 0
           for (;;) {
-            let imgs = document.querySelectorAll<HTMLElement>(
-              '[data-lpage] g-img img',
-            )
-            let img = imgs[imgs.length - 1]
-            if (!img) return
-            img.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            await new Promise(resolve => setTimeout(resolve, 500))
+            let items = document.querySelectorAll<HTMLElement>('[data-lpage]')
+            let item = items[items.length - 1]
+            if (!item) return
+            let img = item.querySelector('img')
+            ;(img || item).scrollIntoView({
+              behavior: 'smooth',
+              block: 'end',
+            })
+            await new Promise(resolve => setTimeout(resolve, 2000))
+
+            let count = document.querySelectorAll('[data-lpage]').length
+            if (count > beforeCount) return
 
             let bars = document.querySelectorAll('[role="progressbar"]')
             let bar = bars[bars.length - 1]
-            if (!bar) return
-            let rect = bar.getBoundingClientRect()
-            let size = rect.width * rect.height
-            if (size == 0) return
+            if (bar) {
+              let rect = bar.getBoundingClientRect()
+              if (rect.width * rect.height > 0) {
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                if (
+                  document.querySelectorAll('[data-lpage]').length > beforeCount
+                ) {
+                  return
+                }
+                continue
+              }
+            }
 
-            await new Promise(resolve => setTimeout(resolve, 500))
+            idle++
+            if (idle > 3) return
+            await new Promise(resolve => setTimeout(resolve, 1000))
           }
-        })
+        }, beforeCount)
         return
       } catch (error) {
         if (!isNavigationDestroyError(error)) throw error
@@ -228,7 +244,10 @@ async function collectByKeywordFromGoogle(
     for (let image of images.slice(lastCount)) {
       await saveImage(image)
     }
-    await scrollToBottom()
+    cli.update(
+      `${cli_prefix}scrolling for more images of "${keyword}": ${count} images ...`,
+    )
+    await scrollForMore(count)
     lastCount = count
   }
   cli.update(`${cli_prefix}searched "${keyword}": ${lastCount} images.`)

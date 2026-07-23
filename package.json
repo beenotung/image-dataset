@@ -70,6 +70,7 @@
     "ionicons": "^8.0.13",
     "knex": "^3.3.0",
     "listening-on": "^2.1.0",
+    "mime-detect": "^1.3.0",
     "npm-init-helper": "^1.6.4",
     "playwright": "^1.61.1",
     "populate-env": "^2.6.1",

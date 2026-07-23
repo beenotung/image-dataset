@@ -242,20 +242,19 @@ async function collectByKeywordFromGoogle(
     hash.write(buffer)
     let filename = hash.digest().toString('hex') + '.' + ext
 
-    let file = join(dir, filename)
-
-    let row = find(proxy.image, { filename })
-    let fileSize = await getFileSize(file)
-    if (fileSize != buffer.length) {
-      await writeFile(file, buffer)
-    }
-
     let domain = new URL(page_url).hostname
     let domain_id = seedRow(proxy.domain, { domain })
     let page_id = seedRow(proxy.page, { url: page_url }, { domain_id })
     let src = storableImageUrl(image_src)
 
+    let row = find(proxy.image, { filename })
     if (!row) {
+      let file = join(dir, filename)
+      let fileSize = await getFileSize(file)
+      if (fileSize != buffer.length) {
+        await writeFile(file, buffer)
+      }
+
       let id = proxy.image.push({
         filename,
         page_id,

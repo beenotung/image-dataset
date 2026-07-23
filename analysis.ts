@@ -17,16 +17,18 @@ let select_counts = db.prepare<
   }
 >(/* sql */ `
 select
-  keyword_id as id
-, keyword
+  keyword.id as id
+, keyword.keyword
 , count(distinct image.id) as image_count
-, count(distinct page_id) as page_count
-, count(distinct domain_id) as site_count
-from image
-inner join keyword on keyword.id = keyword_id
-inner join page on page.id = page_id
-group by keyword_id
-order by keyword_id asc
+, count(distinct page.id) as page_count
+, count(distinct page.domain_id) as site_count
+from keyword
+inner join image_keyword on image_keyword.keyword_id = keyword.id
+inner join image on image.id = image_keyword.image_id
+left join image_page on image_page.image_id = image.id
+left join page on page.id = image_page.page_id
+group by keyword.id
+order by keyword.id asc
 `)
 
 function scanImageDir(dir: string) {

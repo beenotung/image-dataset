@@ -245,10 +245,6 @@ async function collectByKeywordFromGoogle(
     let file = join(dir, filename)
 
     let row = find(proxy.image, { filename })
-    if (row) {
-      return
-    }
-
     let fileSize = await getFileSize(file)
     if (fileSize != buffer.length) {
       await writeFile(file, buffer)
@@ -258,7 +254,21 @@ async function collectByKeywordFromGoogle(
     let domain_id = seedRow(proxy.domain, { domain })
     let page_id = seedRow(proxy.page, { url: page_url }, { domain_id })
 
-    proxy.image.push({ filename, page_id, keyword_id, alt, embedding: null })
+    if (!row) {
+      let id = proxy.image.push({
+        filename,
+        page_id,
+        keyword_id,
+        alt,
+        embedding: null,
+      })
+      row = proxy.image[id]
+    } else if ((row.alt?.length || 0) < alt.length) {
+      row.alt = alt
+    }
+    let image_id = row.id!
+    seedRow(proxy.image_keyword, { image_id, keyword_id })
+    seedRow(proxy.image_page, { image_id, page_id })
   }
 
   let lastCount = 0

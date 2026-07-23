@@ -40,6 +40,7 @@ Usage: `npx image-dataset [options]`
 
 - `-l, --listFile <path>` : Specify a file containing a list of search terms. Each term should be on a new line.
 - `-k, --keyword "<term>"` : Add a single search term for processing. Use quotes if the term contains spaces.
+- `-s, --site <name>` : Image source site to collect from. Default is `"google"`. Alias: `--source <name>`.
 - `-d, --downloadDir <dir>` : Set the directory where downloads will be saved. Default is "./downloaded".
 
 **Analysis Mode:**
@@ -67,6 +68,7 @@ Usage: `npx image-dataset [options]`
 **Notes:**
 
 - In download mode, at least one search term must be specified, either using `--listFile` or `--keyword`.
+- Supported image source sites: `google`.
 - A mode is automatically selected when a mode-specific option is given. If none are selected, the help message will guide you.
 
 ## License

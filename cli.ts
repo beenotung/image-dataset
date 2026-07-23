@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'fs'
 import { extract_lines } from '@beenotung/tslib/string'
 import { resolveFile } from './file'
-import { config } from './config'
+import { config, ImageSourceSite } from './config'
 import { env } from './env'
 import { setupDB } from './setup'
 import { execSync } from 'child_process'
@@ -47,6 +47,8 @@ General:
 Download Mode:
   -l, --listFile <path>       Specify a file containing a list of search terms. Each term should be on a new line.
   -k, --keyword "<term>"      Add a single search term for processing. Use quotes if the term contains spaces.
+  -s, --site <name>           Image source site to collect from. Default is "google".
+      --source <name>         Alias for --site.
   -d, --downloadDir <dir>     Set the directory where downloads will be saved. Default is "./downloaded".
 
 Analysis Mode:
@@ -100,6 +102,19 @@ Notes:
           process.exit(1)
         }
         keywords.push(next)
+        i++
+        break
+      }
+      case '-s':
+      case '--site':
+      case '--source': {
+        if (!next) {
+          showVersion(console.error)
+          console.error('Error: missing site name after --site')
+          process.exit(1)
+        }
+        mode = 'download'
+        config.imageSourceSite = parseImageSourceSite(next)
         i++
         break
       }
@@ -206,6 +221,16 @@ function readListFile(file: string) {
   let text = readFileSync(file).toString()
   let lines = extract_lines(text)
   return lines
+}
+
+function parseImageSourceSite(name: string): ImageSourceSite {
+  if (name == 'google') {
+    return name
+  }
+  showVersion(console.error)
+  console.error('Error: unsupported site: ' + JSON.stringify(name))
+  console.error('Supported sites: google')
+  process.exit(1)
 }
 
 export async function cli() {

@@ -1,3 +1,5 @@
+export type ImageSourceSite = 'google'
+
 export let config = {
   downloadedRootDir: './downloaded',
   datasetRootDir: './dataset',
@@ -6,4 +8,5 @@ export let config = {
   baseModelDir: './saved_models/base_model',
   classifierModelDir: './saved_models/classifier_model',
   chromiumDir: './.chromium',
+  imageSourceSite: 'google' as ImageSourceSite,
 }

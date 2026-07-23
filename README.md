@@ -6,7 +6,7 @@ Tool to build image dataset: collect, classify, review
 
 ## Key Steps
 
-- [x] Collect images from Google Search
+- [x] Collect images from Google Search, specific page URLs, or local HTML files
 - [x] Augment images to increase robustness (using [augment-image](https://github.com/beenotung/augment-image) cli)
 - [x] Classify images with transfer learning
 - [x] Review the classify result to ensure data quality and evaluate model accuracy

@@ -57,7 +57,9 @@ async function collectByKeywordFromGoogle(
               ),
           ))
         if (!challenged) return
-        cli.update(`${cli_prefix}please resolve the challenge in the browser...`)
+        cli.update(
+          `${cli_prefix}please resolve the challenge in the browser...`,
+        )
       } catch (error) {
         if (!isNavigationDestroyError(error)) throw error
       }
@@ -154,7 +156,27 @@ async function collectByKeywordFromGoogle(
 
   async function saveImage(image: ImageItem) {
     let { page_url, image_src, alt } = image
-    let res = await fetch(image_src)
+    let res
+    let reason = ''
+    for (let i = 0; i < 3; i++) {
+      try {
+        res = await fetch(image_src)
+        if (res.ok) {
+          break
+        }
+        reason = `HTTP ${res.status}`
+      } catch (error) {
+        reason = String(error)
+      }
+      if (i < 2) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
+    if (!res?.ok) {
+      cli.nextLine()
+      cli.writeln(`${cli_prefix}skip image (${reason}): ${image_src}`)
+      return
+    }
 
     let mimeType = res.headers.get('Content-Type')
     if (!mimeType?.startsWith('image/')) {

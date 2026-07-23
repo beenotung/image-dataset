@@ -39,6 +39,12 @@ async function collectByKeywordFromGoogle(
 
   let page = await getPage()
 
+  function isNavigationDestroyError(error: unknown) {
+    return /Execution context was destroyed|most likely because of a navigation/i.test(
+      String(error),
+    )
+  }
+
   async function waitForChallenge() {
     for (;;) {
       try {
@@ -51,10 +57,10 @@ async function collectByKeywordFromGoogle(
               ),
           ))
         if (!challenged) return
-      } catch {
-        // ignore when page is navigating
+        cli.update(`${cli_prefix}please resolve the challenge in the browser...`)
+      } catch (error) {
+        if (!isNavigationDestroyError(error)) throw error
       }
-      cli.update(`${cli_prefix}please resolve the challenge in the browser...`)
       await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
@@ -64,13 +70,21 @@ async function collectByKeywordFromGoogle(
   })
   await waitForChallenge()
   await page.fill('form textarea[name="q"]', keyword)
-  await page.evaluate(() => {
-    let form = document.querySelector('form[role="search"]') as HTMLFormElement
-    form.submit()
-  })
-  await page.waitForURL(/https:\/\/www\.google\.com\/(search|sorry)/, {
-    waitUntil: 'domcontentloaded',
-  })
+  await Promise.all([
+    page.waitForURL(/https:\/\/www\.google\.com\/(search|sorry)/, {
+      waitUntil: 'domcontentloaded',
+    }),
+    page
+      .evaluate(() => {
+        let form = document.querySelector(
+          'form[role="search"]',
+        ) as HTMLFormElement
+        form.submit()
+      })
+      .catch(error => {
+        if (!isNavigationDestroyError(error)) throw error
+      }),
+  ])
   await waitForChallenge()
   await page.waitForURL(/^https:\/\/www\.google\.com\/search/, {
     waitUntil: 'domcontentloaded',
@@ -79,49 +93,63 @@ async function collectByKeywordFromGoogle(
   type ImageItem = Awaited<ReturnType<typeof collectImages>>[number]
 
   async function collectImages() {
-    let images = await page.evaluate(async () => {
-      let items = document.querySelectorAll<HTMLElement>('[data-lpage]')
-      let images = []
-      for (let item of items) {
-        let page_url = item.dataset.lpage!
-        let img = item.querySelector('img')!
-        let loading_gif =
-          'data:image/gif;base64,R0lGODlhAQABAIAAAP///////yH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='
-        while (img.src == loading_gif) {
-          img.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-          })
-          await new Promise(resolve => setTimeout(resolve, 500))
-        }
-        images.push({ page_url, image_src: img.src, alt: img.alt })
+    for (;;) {
+      try {
+        return await page.evaluate(async () => {
+          let items = document.querySelectorAll<HTMLElement>('[data-lpage]')
+          let images = []
+          for (let item of items) {
+            let page_url = item.dataset.lpage!
+            let img = item.querySelector('img')!
+            let loading_gif =
+              'data:image/gif;base64,R0lGODlhAQABAIAAAP///////yH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='
+            while (img.src == loading_gif) {
+              img.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+              })
+              await new Promise(resolve => setTimeout(resolve, 500))
+            }
+            images.push({ page_url, image_src: img.src, alt: img.alt })
+          }
+          return images
+        })
+      } catch (error) {
+        if (!isNavigationDestroyError(error)) throw error
+        await waitForChallenge()
       }
-      return images
-    })
-    return images
+    }
   }
 
   async function scrollToBottom() {
-    await page.evaluate(async () => {
-      for (;;) {
-        let imgs = document.querySelectorAll<HTMLElement>(
-          '[data-lpage] g-img img',
-        )
-        let img = imgs[imgs.length - 1]
-        if (!img) return
-        img.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        await new Promise(resolve => setTimeout(resolve, 500))
+    for (;;) {
+      try {
+        await page.evaluate(async () => {
+          for (;;) {
+            let imgs = document.querySelectorAll<HTMLElement>(
+              '[data-lpage] g-img img',
+            )
+            let img = imgs[imgs.length - 1]
+            if (!img) return
+            img.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            await new Promise(resolve => setTimeout(resolve, 500))
 
-        let bars = document.querySelectorAll('[role="progressbar"]')
-        let bar = bars[bars.length - 1]
-        if (!bar) return
-        let rect = bar.getBoundingClientRect()
-        let size = rect.width * rect.height
-        if (size == 0) return
+            let bars = document.querySelectorAll('[role="progressbar"]')
+            let bar = bars[bars.length - 1]
+            if (!bar) return
+            let rect = bar.getBoundingClientRect()
+            let size = rect.width * rect.height
+            if (size == 0) return
 
-        await new Promise(resolve => setTimeout(resolve, 500))
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+        })
+        return
+      } catch (error) {
+        if (!isNavigationDestroyError(error)) throw error
+        await waitForChallenge()
       }
-    })
+    }
   }
 
   async function saveImage(image: ImageItem) {

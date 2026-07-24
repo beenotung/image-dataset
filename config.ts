@@ -1,4 +1,4 @@
-export type SearchEngine = 'google' | 'bing'
+export type SearchEngine = 'google' | 'bing' | 'baidu'
 
 export let config = {
   downloadedRootDir: './downloaded',

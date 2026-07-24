@@ -60,7 +60,7 @@ Download Mode:
   -l, --listFile <path>       Specify a file containing a list of search terms. Each term should be on a new line.
   -k, --keyword "<term>"      Add a single search term for processing. Use quotes if the term contains spaces.
   -p, --page <url>            Collect images from a page URL or local HTML file. Can be repeated.
-  -e, --engine <name>         Image search engine to collect from. Default is "google". Supported: google, bing.
+  -e, --engine <name>         Image search engine to collect from. Default is "google". Supported: google, bing, baidu.
   -d, --downloadDir <dir>     Set the directory where downloads will be saved. Default is "./downloaded".
 
 Analysis Mode:
@@ -249,12 +249,12 @@ function readListFile(file: string) {
 }
 
 function parseSearchEngine(name: string): SearchEngine {
-  if (name == 'google' || name == 'bing') {
+  if (name == 'google' || name == 'bing' || name == 'baidu') {
     return name
   }
   showVersion(console.error)
   console.error('Error: unsupported engine: ' + JSON.stringify(name))
-  console.error('Supported engines: google, bing')
+  console.error('Supported engines: google, bing, baidu')
   process.exit(1)
 }
 

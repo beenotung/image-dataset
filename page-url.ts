@@ -28,10 +28,11 @@ export function urlToDomain(url_string: string) {
 export function urlToFolderName(url: string) {
   let { pathname, searchParams } = new URL(url)
   let parts = pathname.split('/').filter(s => s.length > 0)
-  let name = parts[parts.length - 1] || ''
+  let first = parts[0] || ''
+  let last = parts[parts.length - 1] || ''
   let skip_names = ['search', 's', 'query', 'q', '']
-  if (!skip_names.includes(name)) {
-    return name
+  if (first !== 'search' && !skip_names.includes(last)) {
+    return last
   }
   let keys = [
     'q',
@@ -45,6 +46,7 @@ export function urlToFolderName(url: string) {
     'keyword',
     'wd',
     'oq',
+    'word',
   ]
   for (let key of keys) {
     let value = searchParams.get(key)

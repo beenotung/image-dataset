@@ -592,7 +592,11 @@ async function saveImage(options: {
 
   let domain = urlToDomain(page_url)
   let domain_id = seedRow(proxy.domain, { domain })
-  let page_id = seedRow(proxy.page, { url: page_url }, { domain_id })
+  let page_id = seedRow(
+    proxy.page,
+    { url: page_url },
+    { domain_id, complete_time: null },
+  )
   let src = storableImageUrl(image_src)
 
   let row = find(proxy.image, { filename })

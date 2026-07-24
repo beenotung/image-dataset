@@ -44,6 +44,7 @@ Usage: `npx image-dataset [options]`
 - `-e, --engine <name>` : Search engine for keyword search. Use multiple times and/or comma-separated values (e.g. `-e google,bing`). Default is `google` when using keywords. Supported: google, bing, baidu.
 - `-d, --downloadDir <dir>` : Set the directory where downloads will be saved. Default is "./downloaded".
 - `-f, --force` : Re-collect pages and keywords even if already marked complete.
+- `-m, --min-size <px>` : Minimum side length for browseImage `<img>` fallback when direct download fails. Default is `32` (area threshold is size²).
 
 **Analysis Mode:**
 

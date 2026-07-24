@@ -8,4 +8,5 @@ export let config = {
   baseModelDir: './saved_models/base_model',
   classifierModelDir: './saved_models/classifier_model',
   chromiumDir: './.chromium',
+  browseImageMinSize: 32,
 }

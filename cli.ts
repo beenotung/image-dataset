@@ -21,6 +21,7 @@ type Mode =
 function parseArguments() {
   let keywords: string[] = []
   let pages: string[] = []
+  let force = false
   let mode: Mode = null
   let args = process.argv
   if (args.length == 2) {
@@ -62,6 +63,7 @@ Download Mode:
   -p, --page <url>            Collect images from a page URL or local HTML file. Can be repeated.
   -e, --engine <name>         Image search engine to collect from. Default is "google". Supported: google, bing, baidu.
   -d, --downloadDir <dir>     Set the directory where downloads will be saved. Default is "./downloaded".
+  -f, --force                 Re-collect pages and keywords even if already marked complete.
 
 Analysis Mode:
   -a, --analysis              Run analysis mode instead of download mode.
@@ -154,6 +156,11 @@ Notes:
         i++
         break
       }
+      case '-f':
+      case '--force': {
+        force = true
+        break
+      }
       case '-a':
       case '--analysis': {
         mode = 'analysis'
@@ -230,7 +237,7 @@ Notes:
     )
     process.exit(1)
   }
-  return { keywords, pages, mode }
+  return { keywords, pages, mode, force }
 }
 
 function showVersion(log: typeof console.log) {
@@ -329,7 +336,11 @@ export async function cli() {
     ])
     installPlaywright()
     let mod = await import('./collect')
-    await mod.main({ keywords: args.keywords, pages: args.pages })
+    await mod.main({
+      keywords: args.keywords,
+      pages: args.pages,
+      force: args.force,
+    })
     return
   }
 

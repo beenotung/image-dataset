@@ -776,8 +776,12 @@ function storableImageUrl(image_src: string) {
   return image_src
 }
 
-export async function main(options: { keywords: string[]; pages: string[] }) {
-  let { keywords, pages } = options
+export async function main(options: {
+  keywords: string[]
+  pages: string[]
+  force?: boolean
+}) {
+  let { keywords, pages, force } = options
 
   let n = pages.length + keywords.length
   if (n === 0) {
@@ -789,7 +793,7 @@ export async function main(options: { keywords: string[]; pages: string[] }) {
   for (let url of pages) {
     i++
     let cli_prefix = `[${i}/${n}] `
-    if (find(proxy.page, { url })?.complete_time) {
+    if (!force && find(proxy.page, { url })?.complete_time) {
       console.log(`${cli_prefix}skip page ${url}`)
       continue
     }
@@ -800,7 +804,7 @@ export async function main(options: { keywords: string[]; pages: string[] }) {
   for (let keyword of keywords) {
     i++
     let cli_prefix = `[${i}/${n}] `
-    if (find(proxy.keyword, { keyword })?.complete_time) {
+    if (!force && find(proxy.keyword, { keyword })?.complete_time) {
       console.log(`${cli_prefix}skip "${keyword}"`)
       continue
     }

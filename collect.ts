@@ -15,9 +15,9 @@ let cli = new ProgressCli()
 
 export async function collectByKeyword(
   keyword: string,
-  options: { cli_prefix?: string; engine?: SearchEngine } = {},
+  options: { cli_prefix?: string; engine: SearchEngine },
 ) {
-  let engine = options.engine ?? config.searchEngine
+  let engine = options.engine
   switch (engine) {
     case 'google':
       return collectByKeywordFromGoogle(keyword, options)
@@ -783,11 +783,12 @@ function storableImageUrl(image_src: string) {
 export async function main(options: {
   keywords: string[]
   pages: string[]
+  engines: SearchEngine[]
   force?: boolean
 }) {
-  let { keywords, pages, force } = options
+  let { keywords, pages, engines, force } = options
 
-  let n = pages.length + keywords.length
+  let n = pages.length + keywords.length * engines.length
   if (n === 0) {
     return
   }
@@ -806,27 +807,28 @@ export async function main(options: {
   }
 
   for (let keyword of keywords) {
-    i++
-    let cli_prefix = `[${i}/${n}] `
-    let engine = config.searchEngine
     let keyword_id = seedRow(proxy.keyword, { keyword })
-    if (
-      !force &&
-      find(proxy.keyword_engine, { keyword_id, engine })?.complete_time
-    ) {
-      console.log(`${cli_prefix}skip "${keyword}" (${engine})`)
-      continue
-    }
-    await collectByKeyword(keyword, { cli_prefix, engine })
-    let keyword_engine = find(proxy.keyword_engine, { keyword_id, engine })
-    if (keyword_engine) {
-      keyword_engine.complete_time = Date.now()
-    } else {
-      proxy.keyword_engine.push({
-        keyword_id,
-        engine,
-        complete_time: Date.now(),
-      })
+    for (let engine of engines) {
+      i++
+      let cli_prefix = `[${i}/${n}] `
+      if (
+        !force &&
+        find(proxy.keyword_engine, { keyword_id, engine })?.complete_time
+      ) {
+        console.log(`${cli_prefix}skip "${keyword}" (${engine})`)
+        continue
+      }
+      await collectByKeyword(keyword, { cli_prefix, engine })
+      let keyword_engine = find(proxy.keyword_engine, { keyword_id, engine })
+      if (keyword_engine) {
+        keyword_engine.complete_time = Date.now()
+      } else {
+        proxy.keyword_engine.push({
+          keyword_id,
+          engine,
+          complete_time: Date.now(),
+        })
+      }
     }
   }
 

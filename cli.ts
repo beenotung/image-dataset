@@ -65,6 +65,7 @@ Download Mode:
   -e, --engine <name>         Image search engine for keyword search. Repeat or comma-separate for multiple. Default is "google". Supported: google, bing, baidu.
   -d, --downloadDir <dir>     Set the directory where downloads will be saved. Default is "./downloaded".
   -f, --force                 Re-collect pages and keywords even if already marked complete.
+  -m, --min-size <px>         Minimum side length for browseImage <img> fallback. Default is 32 (area threshold is size²).
 
 Analysis Mode:
   -a, --analysis              Run analysis mode instead of download mode.
@@ -160,6 +161,18 @@ Notes:
       case '-f':
       case '--force': {
         force = true
+        break
+      }
+      case '-m':
+      case '--min-size': {
+        if (!next) {
+          showVersion(console.error)
+          console.error('Error: missing pixel size after --min-size')
+          process.exit(1)
+        }
+        mode = 'download'
+        config.browseImageMinSize = parsePositiveInteger(next, '--min-size')
+        i++
         break
       }
       case '-a':
@@ -277,6 +290,18 @@ function pushSearchEngines(engines: SearchEngine[], value: string) {
     }
     engines.push(parseSearchEngine(name))
   }
+}
+
+function parsePositiveInteger(value: string, flag: string) {
+  let n = +value
+  if (!Number.isFinite(n) || n < 1 || Math.floor(n) !== n) {
+    showVersion(console.error)
+    console.error(
+      'Error: invalid number after ' + flag + ': ' + JSON.stringify(value),
+    )
+    process.exit(1)
+  }
+  return n
 }
 
 function parsePageUrl(url: string) {

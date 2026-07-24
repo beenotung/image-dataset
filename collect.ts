@@ -633,6 +633,27 @@ async function imageFromBody(buffer: Buffer) {
   return { ok: true as const, mimeType, ext, buffer }
 }
 
+type ImageFetchResult =
+  | { ok: true; mimeType: string; ext: string; buffer: Buffer }
+  | { ok: false; reason: string }
+
+async function fetchHttpImage(url: string): Promise<ImageFetchResult> {
+  try {
+    let res = await fetch(url, { redirect: 'follow' })
+    if (!res.ok) {
+      return { ok: false, reason: `HTTP ${res.status}` }
+    }
+    let buffer = Buffer.from(await res.arrayBuffer())
+    let result = await imageFromBody(buffer)
+    if (!result) {
+      return { ok: false, reason: 'not an image' }
+    }
+    return result
+  } catch (error) {
+    return { ok: false, reason: String(error) }
+  }
+}
+
 async function downloadImage(url: string) {
   let res
   let reason = ''
@@ -674,6 +695,7 @@ async function downloadImage(url: string) {
 
 async function browseImage(args: { url: string; reason: string }) {
   let { url, reason } = args
+
   let page = await getPage()
   let context = page.context()
   page = await context.newPage()
@@ -689,7 +711,34 @@ async function browseImage(args: { url: string; reason: string }) {
         return result
       }
     }
-    let image = await page.evaluate(async () => {
+
+    let ogUrl = await page.evaluate(() => {
+      for (let prop of ['og:image:secure_url', 'og:image']) {
+        let content = document
+          .querySelector(`meta[property="${prop}"]`)
+          ?.getAttribute('content')
+        if (!content) {
+          continue
+        }
+        try {
+          return new URL(content, location.href).href
+        } catch {
+          continue
+        }
+      }
+      return null
+    })
+    if (ogUrl) {
+      let fromOg = await fetchHttpImage(ogUrl)
+      if (fromOg.ok) {
+        return fromOg
+      }
+    }
+
+    let image = await page.evaluate(async minSize => {
+      type ImgCandidate = { src: string; area: number }
+      let candidates: ImgCandidate[] = []
+      let minArea = minSize * minSize
       for (let img of document.querySelectorAll('img')) {
         let src =
           img.src ||
@@ -702,6 +751,24 @@ async function browseImage(args: { url: string; reason: string }) {
         }
         try {
           src = new URL(src, location.href).href
+        } catch {
+          continue
+        }
+        let rect = img.getBoundingClientRect()
+        let rectArea = rect.width * rect.height
+        let naturalArea =
+          (img.naturalWidth || img.width || 0) *
+          (img.naturalHeight || img.height || 0)
+        let area = rectArea > 0 ? rectArea : naturalArea
+        if (area < minArea) {
+          continue
+        }
+        candidates.push({ src, area })
+      }
+      candidates.sort((left, right) => right.area - left.area)
+      for (let candidate of candidates) {
+        try {
+          let src = candidate.src
           let res = await fetch(src)
           if (!res.ok) {
             continue
@@ -723,7 +790,7 @@ async function browseImage(args: { url: string; reason: string }) {
           continue
         }
       }
-    })
+    }, config.browseImageMinSize)
     if (!image) {
       return { ok: false as const, reason }
     }

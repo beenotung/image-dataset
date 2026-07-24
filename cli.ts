@@ -21,6 +21,7 @@ type Mode =
 function parseArguments() {
   let keywords: string[] = []
   let pages: string[] = []
+  let engines: SearchEngine[] = []
   let force = false
   let mode: Mode = null
   let args = process.argv
@@ -61,7 +62,7 @@ Download Mode:
   -l, --listFile <path>       Specify a file containing a list of search terms. Each term should be on a new line.
   -k, --keyword "<term>"      Add a single search term for processing. Use quotes if the term contains spaces.
   -p, --page <url>            Collect images from a page URL or local HTML file. Can be repeated.
-  -e, --engine <name>         Image search engine to collect from. Default is "google". Supported: google, bing, baidu.
+  -e, --engine <name>         Image search engine for keyword search. Repeat or comma-separate for multiple. Default is "google". Supported: google, bing, baidu.
   -d, --downloadDir <dir>     Set the directory where downloads will be saved. Default is "./downloaded".
   -f, --force                 Re-collect pages and keywords even if already marked complete.
 
@@ -140,7 +141,7 @@ Notes:
           process.exit(1)
         }
         mode = 'download'
-        config.searchEngine = parseSearchEngine(next)
+        pushSearchEngines(engines, next)
         i++
         break
       }
@@ -237,7 +238,10 @@ Notes:
     )
     process.exit(1)
   }
-  return { keywords, pages, mode, force }
+  if (mode == 'download' && keywords.length > 0 && engines.length === 0) {
+    engines.push('google')
+  }
+  return { keywords, pages, engines, mode, force }
 }
 
 function showVersion(log: typeof console.log) {
@@ -263,6 +267,16 @@ function parseSearchEngine(name: string): SearchEngine {
   console.error('Error: unsupported engine: ' + JSON.stringify(name))
   console.error('Supported engines: google, bing, baidu')
   process.exit(1)
+}
+
+function pushSearchEngines(engines: SearchEngine[], value: string) {
+  for (let part of value.split(',')) {
+    let name = part.trim()
+    if (!name) {
+      continue
+    }
+    engines.push(parseSearchEngine(name))
+  }
 }
 
 function parsePageUrl(url: string) {
@@ -339,6 +353,7 @@ export async function cli() {
     await mod.main({
       keywords: args.keywords,
       pages: args.pages,
+      engines: args.engines,
       force: args.force,
     })
     return

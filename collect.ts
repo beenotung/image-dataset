@@ -86,6 +86,56 @@ async function scrollPageForLazyImages(
   })
 }
 
+async function scrollForMoreSearchItems(
+  page: Page,
+  itemSelector: string,
+  beforeCount: number,
+) {
+  await page.evaluate(
+    async ({ itemSelector, beforeCount }) => {
+      let sleep = (ms: number) =>
+        new Promise<void>(resolve => setTimeout(resolve, ms))
+      let idle = 0
+      for (;;) {
+        let items = document.querySelectorAll(itemSelector)
+        let item = items[items.length - 1]
+        if (!item) {
+          return
+        }
+        item.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end',
+        })
+        await sleep(500)
+        window.scrollTo({
+          top: Math.max(
+            document.documentElement.scrollHeight,
+            document.body.scrollHeight,
+          ),
+          behavior: 'smooth',
+        })
+        await sleep(500)
+        window.scrollBy({ top: window.innerHeight, behavior: 'smooth' })
+        await sleep(500)
+
+        let deadline = Date.now() + 2500
+        while (Date.now() < deadline) {
+          if (document.querySelectorAll(itemSelector).length > beforeCount) {
+            return
+          }
+          await new Promise(resolve => setTimeout(resolve, 150))
+        }
+
+        idle++
+        if (idle > 2) {
+          return
+        }
+      }
+    },
+    { itemSelector, beforeCount },
+  )
+}
+
 async function collectImagesFromPage(page: Page, page_url: string) {
   return page.evaluate(page_url => {
     let pageBase = new URL(page_url)
@@ -376,38 +426,7 @@ async function collectByKeywordFromBing(
   }
 
   async function scrollForMore(beforeCount: number) {
-    await page.evaluate(async beforeCount => {
-      let idle = 0
-      for (;;) {
-        let items = document.querySelectorAll('a.iusc')
-        let item = items[items.length - 1]
-        if (!item) {
-          return
-        }
-        item.scrollIntoView({
-          behavior: 'smooth',
-          block: 'end',
-        })
-        window.scrollTo({
-          top: Math.max(
-            document.documentElement.scrollHeight,
-            document.body.scrollHeight,
-          ),
-          behavior: 'smooth',
-        })
-        await new Promise(resolve => setTimeout(resolve, 1500))
-
-        let count = document.querySelectorAll('a.iusc').length
-        if (count > beforeCount) {
-          return
-        }
-
-        idle++
-        if (idle > 2) {
-          return
-        }
-      }
-    }, beforeCount)
+    await scrollForMoreSearchItems(page, 'a.iusc', beforeCount)
   }
 
   let lastCount = 0
@@ -495,40 +514,11 @@ async function collectByKeywordFromBaidu(
   }
 
   async function scrollForMore(beforeCount: number) {
-    await page.evaluate(async beforeCount => {
-      let idle = 0
-      for (;;) {
-        let items = document.querySelectorAll('[data-module="image-cell"]')
-        let item = items[items.length - 1]
-        if (!item) {
-          return
-        }
-        item.scrollIntoView({
-          behavior: 'smooth',
-          block: 'end',
-        })
-        window.scrollTo({
-          top: Math.max(
-            document.documentElement.scrollHeight,
-            document.body.scrollHeight,
-          ),
-          behavior: 'smooth',
-        })
-        await new Promise(resolve => setTimeout(resolve, 1500))
-
-        let count = document.querySelectorAll(
-          '[data-module="image-cell"]',
-        ).length
-        if (count > beforeCount) {
-          return
-        }
-
-        idle++
-        if (idle > 2) {
-          return
-        }
-      }
-    }, beforeCount)
+    await scrollForMoreSearchItems(
+      page,
+      '[data-module="image-cell"]',
+      beforeCount,
+    )
   }
 
   let lastCount = 0

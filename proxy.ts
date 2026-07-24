@@ -10,6 +10,13 @@ import { db } from './db'
 export type Keyword = {
   id?: null | number
   keyword: string
+}
+
+export type KeywordEngine = {
+  id?: null | number
+  keyword_id: number
+  keyword?: Keyword
+  engine: string
   complete_time: null | number
 }
 
@@ -63,6 +70,7 @@ export type ImagePage = {
 
 export type DBProxy = {
   keyword: Keyword[]
+  keyword_engine: KeywordEngine[]
   domain: Domain[]
   page: Page[]
   image: Image[]
@@ -75,6 +83,10 @@ export let proxy = proxySchema<DBProxy>({
   db,
   tableFields: {
     keyword: [],
+    keyword_engine: [
+      /* foreign references */
+      ['keyword', { field: 'keyword_id', table: 'keyword' }],
+    ],
     domain: [],
     page: [
       /* foreign references */

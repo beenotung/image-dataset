@@ -804,12 +804,26 @@ export async function main(options: {
   for (let keyword of keywords) {
     i++
     let cli_prefix = `[${i}/${n}] `
-    if (!force && find(proxy.keyword, { keyword })?.complete_time) {
-      console.log(`${cli_prefix}skip "${keyword}"`)
+    let engine = config.searchEngine
+    let keyword_id = seedRow(proxy.keyword, { keyword })
+    if (
+      !force &&
+      find(proxy.keyword_engine, { keyword_id, engine })?.complete_time
+    ) {
+      console.log(`${cli_prefix}skip "${keyword}" (${engine})`)
       continue
     }
-    await collectByKeyword(keyword, { cli_prefix })
-    find(proxy.keyword, { keyword })!.complete_time = Date.now()
+    await collectByKeyword(keyword, { cli_prefix, engine })
+    let keyword_engine = find(proxy.keyword_engine, { keyword_id, engine })
+    if (keyword_engine) {
+      keyword_engine.complete_time = Date.now()
+    } else {
+      proxy.keyword_engine.push({
+        keyword_id,
+        engine,
+        complete_time: Date.now(),
+      })
+    }
   }
 
   await closeBrowser()

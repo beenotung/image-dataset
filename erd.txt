@@ -19,6 +19,13 @@ keyword
 -------
 id integer PK
 keyword text unique
+
+
+keyword_engine
+--------------
+id integer PK
+keyword_id integer FK >0- keyword.id
+engine text
 complete_time integer NULL
 
 
@@ -77,6 +84,7 @@ domain text unique
 # table-bg: #ffffff
 # table-text: #000000
 # keyword (150, 550)
+# keyword_engine (150, 680)
 # image (150, 291)
 # image_keyword (550, 396)
 # image_page (550, 220)

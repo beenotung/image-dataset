@@ -43,6 +43,7 @@ Usage: `npx image-dataset [options]`
 - `-p, --page <url>` : Collect images from a page URL or local HTML file. Can be repeated.
 - `-e, --engine <name>` : Image search engine to collect from. Default is "google". Supported: google, bing, baidu.
 - `-d, --downloadDir <dir>` : Set the directory where downloads will be saved. Default is "./downloaded".
+- `-f, --force` : Re-collect pages and keywords even if already marked complete.
 
 **Analysis Mode:**
 

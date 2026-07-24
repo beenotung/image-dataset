@@ -1,4 +1,4 @@
-import { detectFileMime } from 'mime-detect'
+import { detectBufferMime, detectFileMime } from 'mime-detect'
 import { ProgressCli } from '@beenotung/tslib/progress-cli'
 import { createHash } from 'crypto'
 import { join } from 'path'
@@ -630,6 +630,15 @@ async function saveImage(options: {
   }
 }
 
+async function imageFromBody(buffer: Buffer) {
+  let mimeType = await detectBufferMime(buffer)
+  if (!mimeType.startsWith('image/')) {
+    return null
+  }
+  let ext = mimeType.split('/')[1].split(';')[0].split('+')[0]
+  return { ok: true as const, mimeType, ext, buffer }
+}
+
 async function downloadImage(url: string) {
   let res
   let reason = ''
@@ -654,13 +663,6 @@ async function downloadImage(url: string) {
     return { ok: false as const, reason }
   }
 
-  let mimeType = res.headers.get('Content-Type')
-  if (!mimeType?.startsWith('image/')) {
-    return await browseImage({ url, reason: 'not an image' })
-  }
-
-  let ext = mimeType.split('/')[1].split(';')[0].split('+')[0]
-
   let buffer
   try {
     let binary = await res.arrayBuffer()
@@ -669,7 +671,11 @@ async function downloadImage(url: string) {
     return { ok: false as const, reason: String(error) }
   }
 
-  return { ok: true as const, mimeType, ext, buffer }
+  let result = await imageFromBody(buffer)
+  if (!result) {
+    return await browseImage({ url, reason: 'not an image' })
+  }
+  return result
 }
 
 async function browseImage(args: { url: string; reason: string }) {
@@ -682,13 +688,11 @@ async function browseImage(args: { url: string; reason: string }) {
     if (!res || !res.ok()) {
       return { ok: false as const, reason }
     }
-    let mimeType = res.headers()['content-type']
-    if (mimeType.startsWith('image/')) {
-      let ext = mimeType.split('/')[1].split(';')[0].split('+')[0]
-      let body = await res.body()
-      if (body) {
-        let buffer = Buffer.from(body)
-        return { ok: true as const, mimeType, ext, buffer }
+    let body = await res.body()
+    if (body) {
+      let result = await imageFromBody(Buffer.from(body))
+      if (result) {
+        return result
       }
     }
     let image = await page.evaluate(async () => {
@@ -733,6 +737,9 @@ async function browseImage(args: { url: string; reason: string }) {
     let buffer = Buffer.from(image.dataUrl.split(',')[1], 'base64')
     return { ok: true as const, buffer, ...rest }
   } catch (error) {
+    if (/Download is starting/i.test(String(error))) {
+      return { ok: false as const, reason }
+    }
     return { ok: false as const, reason: String(error) }
   } finally {
     await page.close()
